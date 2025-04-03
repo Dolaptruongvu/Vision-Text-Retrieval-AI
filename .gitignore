@@ -1,4 +1,5 @@
-Crawl4ai/data/
+Crawl4ai/rawData/
+Crawl4ai/encodedData
 sample_dataset.json
 sample_dataset.jsonl
 

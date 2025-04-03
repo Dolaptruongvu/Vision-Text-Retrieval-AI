@@ -44,12 +44,12 @@ async def main():
     config = CrawlerRunConfig(
         extraction_strategy=llm_strategy,
         cache_mode=CacheMode.BYPASS,
-        css_selector=".detail-content", # Focus on this
+        css_selector=".news", # Focus on this
     )
 
     async with AsyncWebCrawler(config=BrowserConfig(headless=True)) as crawler:
         result = await crawler.arun(
-            url="https://bachnong.vn/tin-tuc/tin-tuc-nong-nghiep/top-9-benh-cay-trong-thuong-gap-phai-va-cach-khac-phuc.html",
+            url="https://bachnong.vn/tin-tuc/tin-tuc-nong-nghiep/huong-dan-trong-cam-cho-nang-suat-cao.html",
             config=config
         )
 
@@ -66,8 +66,8 @@ async def main():
             return
         print("Raw from LLM")
         print(blocks)
-        print("\n✅ --- Extracted RAG-ready Markdown ---\n")
-        with open("./data/rag_blocks_milvus.jsonl", "a", encoding="utf-8") as f:
+        print("\n --- Extracted RAG-ready Markdown ---\n")
+        with open("./rawData/rag_blocks_milvus.jsonl", "a", encoding="utf-8") as f:
             for block in blocks:
                 try:
                     parsed = RagBlock(**block)
