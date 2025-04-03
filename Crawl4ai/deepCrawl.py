@@ -8,7 +8,7 @@ from crawl4ai import (
     AsyncWebCrawler, BrowserConfig, CrawlerRunConfig,
     CacheMode, LLMConfig
 )
-# Keep original imports
+
 from crawl4ai.content_scraping_strategy import LXMLWebScrapingStrategy # Keep even if implicitly used
 from crawl4ai.deep_crawling import BestFirstCrawlingStrategy
 from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
@@ -17,21 +17,21 @@ from crawl4ai.chunking_strategy import OverlappingWindowChunking
 from crawl4ai.extraction_strategy import LLMExtractionStrategy
 load_dotenv()
 
-# Keep original schema definition
+
 class RagBlock(BaseModel):
     tags: list[str]
     content: list[str]
 
 async def main():
 
-    # Keep original API key loading
+    
     gemini_token = os.getenv("GEMINI_API_KEY")
     if not gemini_token:
         raise ValueError("Missing GEMINI_API_KEY in .env file.")
 
 
-    # Keep original chunking strategy
-    chunking_strategy = OverlappingWindowChunking(window_size=800, overlap=200)
+    
+    chunking_strategy = OverlappingWindowChunking(window_size=500, overlap=100)
 
 
     # Keep original LLM extraction strategy setup
@@ -51,15 +51,15 @@ async def main():
             "Quan trọng nhất là đừng trả về chuỗi JSON dạng string, chỉ trả về list object JSON chuẩn có schema như tôi đã nhắc như trên."
         ),
         apply_chunking=True,
-        chunk_token_threshold=2048,
+        chunk_token_threshold=1024,
         input_format="markdown",
         chunking_strategy=chunking_strategy,
-        extra_args={"temperature": 0.2, "max_tokens": 2048}
+        extra_args={"temperature": 0.2, "max_tokens": 4096}
     )
 
-    # Keep original deep crawl configuration components
+    
     filter_chain = FilterChain([
-        URLPatternFilter(patterns=["*/tin-tuc/tin-tuc-nong-nghiep/*.html"])
+        URLPatternFilter(patterns=["*trong-cay-va-san-xuat-cay-trong*"])
     ])
 
 
@@ -111,53 +111,53 @@ async def main():
         max_depth=1,
         include_external=False,
         url_scorer=scorer,
-        max_pages=10, # Keep original max_pages
+        # max_pages=10,
         filter_chain=filter_chain
     )
 
 
-    # Configure CrawlerRunConfig
+    
     config = CrawlerRunConfig(
         deep_crawl_strategy=strategy,
         extraction_strategy=llm_strategy,
-        cache_mode=CacheMode.BYPASS, # Keep original cache mode
-        css_selector=".news",  # Keep original selector (!! Please verify this selector for article content !!)
+        cache_mode=CacheMode.BYPASS, 
+        css_selector="#content",  
         verbose=True,
         word_count_threshold=50,
-        stream=True # Changed from False to True to enable streaming results
+        stream=True 
     )
 
     # Initialize crawler
     async with AsyncWebCrawler(config=BrowserConfig(headless=True)) as crawler:
-        start_url = "https://bachnong.vn/tin-tuc/tin-tuc-nong-nghiep" # Keep original start URL
+        start_url = "https://vdtnn.com/trong-cay-va-san-xuat-cay-trong" 
         print(f"Starting prioritized deep crawl from: {start_url} with streaming enabled.")
 
-        # --- Process results using async for loop (due to stream=True) ---
+        
         print("\n--- Extracting RAG blocks and appending to file ---")
         pages_processed_this_run = 0
-        output_file = "./rawData/rag_blocks_milvus.jsonl" # Keep original output file
+        output_file = "./rawData/rag_blocks_milvus.jsonl" 
 
-        # Open file in append mode ('a')
+        
         with open(output_file, "a", encoding="utf-8") as f:
-            # Use async for to iterate over results as they become available
+
             async for result in await crawler.arun(start_url, config=config):
                 pages_processed_this_run += 1
-                # Keep original print statements for title and URL
-                title = result.metadata.get("title", "Khong co title") # Use original default value
+                
+                title = result.metadata.get("title", "Khong co title") 
                 print(f"Title: {title}")
                 print(f"URL: {result.url}")
 
-                # Keep original processing logic for each result
+                
                 if result.success:
                     if result.extracted_content:
                         try:
-                            # Basic cleaning for potential markdown code fences around JSON
+                            
                             content_str = result.extracted_content.strip()
                             if content_str.startswith("```json"): content_str = content_str[7:]
                             if content_str.endswith("```"): content_str = content_str[:-3]
                             content_str = content_str.strip()
 
-                            # LLM might return a string containing JSON or a direct list
+                            
                             blocks = []
                             if isinstance(content_str, str): blocks = json.loads(content_str)
                             elif isinstance(content_str, list): blocks = content_str
@@ -171,46 +171,40 @@ async def main():
 
                         except json.JSONDecodeError as e:
                             print("JSON decode failed:", e)
-                            print(f"Raw content causing error: {result.extracted_content[:500]}...") # Print raw content on error
-                            continue # Skip this result if JSON is invalid
+                            print(f"Raw content causing error: {result.extracted_content[:500]}...") 
+                            continue 
 
-                        # Keep original print statement for raw LLM output
+                        
                         print("Raw extracted content from LLM:")
                         print(blocks)
                         print("\n--- Extracted RAG-ready Markdown ---\n")
-                        # Keep original block processing logic
+                        
                         for block in blocks:
                             try:
                                 parsed = RagBlock(**block)
                                 markdown_text = "\n".join(parsed.content).strip()
-                                if not markdown_text: continue # Skip empty blocks
+                                if not markdown_text: continue 
 
                                 entry = {
-                                    "id": str(uuid.uuid4()), # Keep original ID generation
+                                    "id": str(uuid.uuid4()), 
                                     "content": markdown_text,
-                                    # Keep original metadata structure for the entry
                                     "metadata": {"tags": parsed.tags, "title": title, "url": result.url}
                                 }
-                                # Write entry to the already opened file
                                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-                                # Keep original print statement for the processed block
                                 print(f"### {' / '.join(parsed.tags)}\n{markdown_text}\n")
                             except Exception as e:
-                                # Keep original error handling for invalid blocks
                                 print("Invalid block:", block)
                                 print("Error:", e)
                     else:
-                         # Keep original message when no content is extracted
                         print("Crawled successfully, but no extracted content available.")
                 else:
-                    # Keep original message for crawl failure
                     print(f"Crawl failed: {result.error_message}")
-                print("-" * 80) # Keep original separator
-        # --- End async for loop ---
+                print("-" * 80)
+                await asyncio.sleep(4.3)
+
 
         print(f"\n--- Run Summary ---")
         print(f"Total pages processed in this run: {pages_processed_this_run}")
-        # Note: Total blocks written is harder to track precisely outside the loop in streaming mode without extra variables
 
         # Keep original token usage display
         print("\n--- Token Usage ---")
