@@ -1,0 +1,31 @@
+Crawl4ai/data/
+sample_dataset.json
+sample_dataset.jsonl
+
+results/
+*.ipynb_checkpoints/
+
+# Token, credentials, API keys
+*.env
+token.txt
+
+#Milvus volumes
+milvus/volumes/
+
+# Temp / cache
+__pycache__/
+*.py[cod]
+*.log
+*.tmp
+*.bak
+
+
+# VSCode settings (tuỳ chọn)
+.vscode/
+
+# Window
+.DS_Store
+Thumbs.db
+
+#flashattn
+flash_attn-2.7.4%2Bcu124torch2.6.0cxx11abiFALSE-cp312-cp312-win_amd64.whl
