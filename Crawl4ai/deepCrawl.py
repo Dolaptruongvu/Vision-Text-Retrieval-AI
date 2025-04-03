@@ -47,7 +47,7 @@ async def main():
             "Trả về một danh sách các object JSON theo mẫu:\n"
             "{ \"tags\": [\"chủ đề cụ thể\"], \"content\": [\"nội dung markdown\"] }\n"
             "Không trả về chuỗi đơn hoặc nội dung ngoài schema. Không trả về quảng cáo, link hoặc javascript, điều hướng, bình luận, chuyên mục khác, liên hệ, giá vàng/ thị trường, các title chuyên ngành khác."
-            "Tất cả tags và nội dung phải bằng tiếng Việt."
+            "Tất cả tags và nội dung phải bằng tiếng Việt kể cả heading"
             "Quan trọng nhất là đừng trả về chuỗi JSON dạng string, chỉ trả về list object JSON chuẩn có schema như tôi đã nhắc như trên."
         ),
         apply_chunking=True,
@@ -59,7 +59,7 @@ async def main():
 
     
     filter_chain = FilterChain([
-        URLPatternFilter(patterns=["*trong-cay-va-san-xuat-cay-trong*"])
+        URLPatternFilter(patterns=["*blog*"])
     ])
 
 
@@ -97,18 +97,52 @@ async def main():
         "mua-vu", "thoi-tiet",
         "dat-trong", "gia-the", "dinh-duong",
         "giong", "khang-benh",
-        "cham-soc", "ky-thuat", "meo"
+        "cham-soc", "ky-thuat", "meo",
+        "disease", "worm", "fungus", "virus", "bacteria",
+        "cause", "reason", "why",
+        "symptom", "sign", "phenomenon", "expression",
+        "treatment", "therapy", "solution", "fix",
+        "prevention", "avoidance", "limitation", "control",
+        "handling", "elimination", "spray-pesticide",
+        "protection", "safety",
+        "harmful", "impact", "effect",
+        "infected",
+        "yellow-leaf", "curled-leaf", "leaf-fall", "leaf-burn", "leaf-spot",
+        "root-rot", "stem-rot", "bud-rot", "fruit-rot",
+        "wilt-disease", "greening-disease", "sudden-death", "slow-death",
+        "dry-branch", "dry-fruit", "stem-dieback",
+        "fruit-crack", "stem-crack", "deformation",
+        "empty-seed", "flower-drop", "fruit-drop",
+        "tumor", "swelling",
+        "white-spots", "dew", "chlorosis",
+        "shock",
+        "insect", "pest-insect",
+        "layout", "green-leafhopper", "moth-caterpillar", "leaf-roller",
+        "stem-borer", "fruit-borer",
+        "red-mite", "mealybug", "fruit-fly", "snail",
+        "nematode",
+        "beetle", "borer",
+        "insecticide", "fungicide", "plant-protection-product",
+        "herbal-medicine", "antibacterial-agent",
+        "biological", "organic",
+        "fertilizer",
+        "pest-disease", "agricultural-disease",
+        "plant-disease", "crop-disease", "agriculture-disease",
+        "crop-season", "weather",
+        "soil", "growing-medium", "nutrition",
+        "seed", "disease-resistant",
+        "care", "technique", "tip"
     ]
 
 
     scorer = KeywordRelevanceScorer(
         keywords=keywords,
-        weight=1
+        weight=0.9
     )
 
 
     strategy = BestFirstCrawlingStrategy(
-        max_depth=1,
+        max_depth=3,
         include_external=False,
         url_scorer=scorer,
         # max_pages=10,
@@ -121,7 +155,8 @@ async def main():
         deep_crawl_strategy=strategy,
         extraction_strategy=llm_strategy,
         cache_mode=CacheMode.BYPASS, 
-        css_selector="#content",  
+        # css_selector=".container",  
+        target_elements=["#single_post_content"],
         verbose=True,
         word_count_threshold=50,
         stream=True 
@@ -129,7 +164,7 @@ async def main():
 
     # Initialize crawler
     async with AsyncWebCrawler(config=BrowserConfig(headless=True)) as crawler:
-        start_url = "https://vdtnn.com/trong-cay-va-san-xuat-cay-trong" 
+        start_url = "https://geopard.tech/blog/" 
         print(f"Starting prioritized deep crawl from: {start_url} with streaming enabled.")
 
         
@@ -146,6 +181,7 @@ async def main():
                 title = result.metadata.get("title", "Khong co title") 
                 print(f"Title: {title}")
                 print(f"URL: {result.url}")
+                print(f"Result:{result}")
 
                 
                 if result.success:
