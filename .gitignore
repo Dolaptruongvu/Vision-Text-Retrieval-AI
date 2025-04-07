@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Jupyter & IPython
+.ipynb_checkpoints/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+
+dataset/
+realimage/
+modelsCP/
+ref/
+*.keras
+*.h5
+*.ckpt
+*.tflite
+*.pb
+
+
+*.zip
+*.tar.gz
+*.rar
+
+
+*.log
+*.csv
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# WSL/Ubuntu
+mnt/
