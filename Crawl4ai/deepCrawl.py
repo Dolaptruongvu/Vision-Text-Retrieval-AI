@@ -59,7 +59,7 @@ async def main():
 
     
     filter_chain = FilterChain([
-        URLPatternFilter(patterns=["*blog*"])
+        URLPatternFilter(patterns=["*news*"])
     ])
 
 
@@ -142,11 +142,11 @@ async def main():
 
 
     strategy = BestFirstCrawlingStrategy(
-        max_depth=3,
+        max_depth=1,
         include_external=False,
         url_scorer=scorer,
         # max_pages=10,
-        filter_chain=filter_chain
+        # filter_chain=filter_chain
     )
 
 
@@ -156,7 +156,7 @@ async def main():
         extraction_strategy=llm_strategy,
         cache_mode=CacheMode.BYPASS, 
         # css_selector=".container",  
-        target_elements=["#single_post_content"],
+        target_elements=[".row"],
         verbose=True,
         word_count_threshold=50,
         stream=True 
@@ -164,7 +164,7 @@ async def main():
 
     # Initialize crawler
     async with AsyncWebCrawler(config=BrowserConfig(headless=True)) as crawler:
-        start_url = "https://geopard.tech/blog/" 
+        start_url = "https://phys.org/tags/plant+pathology/" 
         print(f"Starting prioritized deep crawl from: {start_url} with streaming enabled.")
 
         
@@ -181,13 +181,13 @@ async def main():
                 title = result.metadata.get("title", "Khong co title") 
                 print(f"Title: {title}")
                 print(f"URL: {result.url}")
-                print(f"Result:{result}")
 
                 
                 if result.success:
                     if result.extracted_content:
                         try:
-                            
+                            print("Extracted Content:")
+                            print(result.extracted_content)
                             content_str = result.extracted_content.strip()
                             if content_str.startswith("```json"): content_str = content_str[7:]
                             if content_str.endswith("```"): content_str = content_str[:-3]

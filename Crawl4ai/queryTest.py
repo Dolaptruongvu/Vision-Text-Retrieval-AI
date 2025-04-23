@@ -7,8 +7,8 @@ collection = Collection("rag_blocks")
 # Ensure collection is loaded into query node (won’t load full data!)
 collection.load()
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
-query_vector = model.encode("Cách chăm sóc cây cam hiệu quả", normalize_embeddings=True).tolist()
+model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+query_vector = model.encode("Cần phun thuốc thường xuyên để kiểm soát bệnh thrips. Nên phun thuốc mỗi bao nhiêu ngày ?", normalize_embeddings=True).tolist()
 
 results = collection.search(
     data=[query_vector],

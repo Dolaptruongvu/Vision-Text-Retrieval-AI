@@ -1,0 +1,31 @@
+version: '3.8' # Sử dụng phiên bản phù hợp
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0 # Sử dụng phiên bản Elasticsearch mong muốn (ví dụ: 8.15.0)
+    container_name: es-container # Đặt tên cho container
+    environment:
+      - discovery.type=single-node # Chạy dưới dạng node đơn
+      - xpack.security.enabled=false # Tắt bảo mật X-Pack để dễ dàng kết nối (KHÔNG khuyến nghị cho production!)
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g" # Giới hạn RAM cho Elasticsearch (điều chỉnh nếu cần)
+    volumes:
+      - es_data:/usr/share/elasticsearch/data # Mount volume để lưu trữ dữ liệu index bền vững
+    ports:
+      - "9200:9200" # Map cổng 9200 của host vào container
+      - "9300:9300" # Map cổng 9300 (tùy chọn, cho giao tiếp nội bộ nếu cần)
+    ulimits: # Tăng giới hạn tài nguyên (quan trọng cho Elasticsearch)
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck: # Kiểm tra sức khỏe container
+        test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
+        interval: 10s
+        timeout: 10s
+        retries: 5
+
+volumes:
+  es_data: # Khai báo volume tên là es_data
+    driver: local # Sử dụng driver mặc định
