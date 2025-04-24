@@ -2,11 +2,11 @@ import torch
 import os
 import time
 import traceback
-from typing import List, Any
-
+from typing import List, Any, Optional, Dict
+from dotenv import load_dotenv
 # --- Haystack Core & Standard Components ---
 from haystack import Pipeline, Document, component
-from haystack.components.builders import AnswerBuilder, ChatPromptBuilder, PromptBuilder
+from haystack.components.builders import AnswerBuilder, ChatPromptBuilder
 from haystack.utils import Secret, ComponentDevice
 from haystack.components.embedders import SentenceTransformersTextEmbedder
 from haystack.components.joiners import DocumentJoiner, ListJoiner
@@ -24,17 +24,19 @@ from haystack_integrations.components.retrievers.elasticsearch import Elasticsea
 from haystack_experimental.chat_message_stores.in_memory import InMemoryChatMessageStore
 from haystack_experimental.components.retrievers import ChatMessageRetriever
 from haystack_experimental.components.writers import ChatMessageWriter
-import re # Thêm thư viện regex để parse
-# --- Custom Component ---
+import re
+
+# --- Custom Components ---
 @component
 class StringListToChatMessages:
-    """Chuyển đổi List[str] thành List[ChatMessage] với vai trò 'assistant'."""
     @component.output_types(messages=List[ChatMessage])
     def run(self, replies: List[str]):
         return {"messages": [ChatMessage.from_assistant(reply) for reply in replies]}
 
 # --- Cấu hình ---
-HF_TOKEN = Secret.from_token(os.getenv("HF_TOKEN"))
+load_dotenv()
+hf_token = os.getenv("HF_TOKEN")
+HF_TOKEN = Secret.from_token(hf_token) if hf_token else None
 EXPECTED_EMBEDDING_DIM = 384
 MILVUS_URI = "http://localhost:19530"
 COLLECTION_NAME = "rag_blocks"
@@ -48,7 +50,8 @@ ES_INDEX_NAME = "my_rag_index"
 ES_BM25_TOP_K = 7
 RANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 RANKER_FINAL_TOP_K = 5
-OLLAMA_MODEL_NAME = "llama3.1:8b-instruct-q6_K"
+OLLAMA_MODEL_NAME = "llama3.1:8b-instruct-q8_0"
+# OLLAMA_MODEL_NAME = "llama3.1:8b-instruct-q6_K"
 OLLAMA_URL = "http://localhost:11434"
 OLLAMA_TIMEOUT = 180
 
@@ -56,9 +59,11 @@ OLLAMA_TIMEOUT = 180
 print("--- Determining Device ---")
 if torch.cuda.is_available() and torch.cuda.device_count() > 0:
     try:
-        gpu_device_str = f"cuda:{torch.cuda.current_device()}"
+        gpu_id = 0
+        gpu_name = torch.cuda.get_device_name(gpu_id)
+        gpu_device_str = f"cuda:{gpu_id}"
         device = ComponentDevice.from_str(gpu_device_str)
-        print(f"CUDA available. Using: {device.to_torch_str()}")
+        print(f"CUDA available. Using GPU {gpu_id}: {gpu_name} ({device.to_torch_str()})")
     except Exception as e:
         print(f"CUDA error: {e}. Using CPU.")
         device = ComponentDevice.from_str("cpu")
@@ -66,6 +71,7 @@ else:
     device = ComponentDevice.from_str("cpu")
     print("CUDA not available. Using CPU.")
 print("------------------------------------\n")
+
 
 # --- 2. Khởi tạo Haystack Components ---
 print("--- Initializing Haystack Components ---")
@@ -121,69 +127,86 @@ memory_writer = ChatMessageWriter(memory_store)
 memory_joiner = ListJoiner(List[ChatMessage])
 print("Memory components initialized.")
 
-# -- Query Rewriting Components --
-query_rewrite_template = """Dựa vào lịch sử trò chuyện dưới đây, hãy viết lại câu hỏi cuối cùng của người dùng thành một câu hỏi độc lập, đầy đủ ngữ nghĩa để có thể dùng tìm kiếm thông tin **trong cơ sở dữ liệu về nông nghiệp/bệnh cây trồng**.
-- Nếu câu hỏi cuối rõ ràng và liên quan đến nông nghiệp/bệnh cây trồng (kể cả dùng đại từ như 'nó', 'bệnh đó'), hãy viết lại cho đầy đủ. Ví dụ: "cách trị bệnh đó?" -> "cách trị bệnh thán thư trên cây xoài?".
-- Nếu câu hỏi cuối KHÔNG liên quan đến nông nghiệp/bệnh cây trồng (ví dụ: chào hỏi, hỏi về bản thân bạn, hỏi về câu hỏi trước đó), hãy trả về một chuỗi rỗng hoặc một từ khóa đặc biệt như "NO_REWRITE_NEEDED".
-- Nếu không có lịch sử trò chuyện, giữ nguyên câu hỏi.
-Chỉ trả về câu hỏi đã viết lại hoặc chuỗi rỗng/"NO_REWRITE_NEEDED".
-
-Lịch sử trò chuyện:
-{% for msg in memories %}
-  {% if msg.role == 'user' %}User: {{ (msg.to_dict()).content[0].text }}{% elif msg.role == 'assistant' %}Assistant: {{ (msg.to_dict()).content[0].text }}{% endif %}
-{% endfor %}
-
-Câu hỏi cuối của người dùng: {{ query }}
-
-Câu hỏi đã viết lại (hoặc chuỗi rỗng/NO_REWRITE_NEEDED):"""
-query_rewrite_prompt_builder = PromptBuilder(template=query_rewrite_template)
-try:
-    query_rewrite_llm_generator = OllamaGenerator(model=OLLAMA_MODEL_NAME, url=OLLAMA_URL, timeout=OLLAMA_TIMEOUT, generation_kwargs={"temperature": 0.05, "top_p": 0.9, "num_predict": 200})
-    print("Initialized Query Rewriting LLM.")
-except Exception as e: print(f"Error initializing Query Rewriting LLM: {e}"); exit()
-rewrite_output_adapter = OutputAdapter(template="{{ replies[0] }}", output_type=str)
-print("Query rewriting components initialized.")
-
-# -- Chat Prompt Builder (cho LLM cuối) --
+# -- Chat Prompt Builder --
 chat_prompt_template = [
     ChatMessage.from_system(
-        "Bạn là một trợ lý AI hữu ích, chuyên về nông nghiệp và bệnh cây trồng tại Việt Nam. "
-        "Hãy trò chuyện và trả lời câu hỏi của người dùng một cách tự nhiên. "
-        "QUAN TRỌNG: Luôn xem xét LỊCH SỬ TRÒ CHUYỆN và THÔNG TIN BỔ SUNG (biến `identified_disease`) nếu có."
-        "- Nếu `identified_disease` chứa 'healthy', hãy thông báo cây trông khỏe mạnh và không có dấu hiệu bệnh dựa trên hình ảnh, tránh nói tên healthy ra" # Xử lý healthy
-        "- Nếu `identified_disease` được cung cấp (và không phải healthy), hãy ưu tiên TÀI LIỆU THAM KHẢO để trả lời về bệnh đó. Nếu không có tài liệu, hãy nói rõ là không tìm thấy thông tin về bệnh này trong tài liệu."
-        "- Nếu không có `identified_disease` và câu hỏi liên quan đến nông nghiệp/bệnh cây trồng, hãy dùng TÀI LIỆU THAM KHẢO để trả lời."
-        "- Nếu câu hỏi là hội thoại thông thường (ví dụ: 'chào', 'bạn là ai?', 'tôi vừa hỏi gì?'), hãy trả lời trực tiếp dựa trên LỊCH SỬ TRÒ CHUYỆN và vai trò của bạn." # Xử lý câu hỏi meta
-        "- Nếu không có thông tin từ bất kỳ nguồn nào (tài liệu, lịch sử) để trả lời một câu hỏi cụ thể, hãy nói bạn không biết hoặc không có thông tin."
-        "- Trả lời bằng tiếng Việt."
+        "You are a Vietnamese agricultural AI assistant. Your mission is to provide accurate and helpful agricultural information to Vietnamese users. STRICTLY ADHERE to the following rules IN THE CORRECT ORDER:"
+        "\n"
+        "**RULE 1: PRIORITIZE HANDLING 'HEALTHY' IMAGE RESULTS**"
+        "\n"
+        "*   **DECISIVE CONDITION:** The `**Image Analysis Result:**` line exists AND it contains ONE OF THE FOLLOWING KEYWORDS: 'khỏe mạnh', 'healthy', 'không có bệnh', 'bình thường'."
+        "*   **MANDATORY AND SOLE ACTION (If DECISIVE CONDITION is TRUE):**"
+        "    1.  **COMPLETELY IGNORE EVERYTHING ELSE:** Do NOT read, consider, or use `{{ query }}`, `{{ memories }}`, and **POSITIVELY DO NOT LOOK AT or USE any content from `{{ documents }}`**. They are irrelevant and FORBIDDEN in this case."
+        "    2.  Reply with EXACTLY and ONLY the following sentence in VIETNAMESE: 'Kết quả phân tích hình ảnh cho thấy cây trồng này khỏe mạnh, không có dấu hiệu bệnh rõ ràng.'"
+        "    3.  **STOP IMMEDIATELY.** Do not execute any other Rules."
+        "\n"
+        "--- Only execute the rules below IF RULE 1 WAS NOT TRIGGERED ---"
+        "\n"
+        "**RULE 2: HANDLE OTHER (NON-'HEALTHY') IMAGE RESULTS**"
+        "\n"
+        "*   **CONDITION:** The `**Image Analysis Result:**` line exists AND it does NOT contain any keywords listed in Rule 1."
+        "*   **ACTION:**"
+        "    *   Identify the disease/issue from `**Image Analysis Result:**` (This is the **Current Context**)."
+        "    *   Answer `{{ query }}` focusing on this **Current Context**."
+        "    *   **ONLY** use `{{ documents }}` if they are directly relevant to the **Current Context**. Ignore all irrelevant documents."
+        "    *   Avoid video links."
+        "    *   Stop."
+        "\n"
+        "--- Only execute the rules below IF RULE 1 AND RULE 2 DID NOT APPLY ---"
+        "\n"
+        "**RULE 3: CHECK FOR OFF-TOPIC QUERIES (NO IMAGE)**"
+        "\n"
+        "*   **CONDITION:** No `**Image Analysis Result:**` exists AND `{{ query }}` is clearly NOT related to agriculture, plants, pests, diseases, fertilizers, or farming techniques (e.g., asking about politics, history, unrelated cooking, celebrities, world news, etc.)."
+        "*   **MANDATORY ACTION:**"
+        "    1.  **ABSOLUTELY DO NOT USE `{{ documents }}`.**"
+        "    2.  Politely reply in VIETNAMESE that you are an agricultural assistant and cannot answer off-topic questions. Example: 'Tôi là trợ lý AI chuyên về nông nghiệp Việt Nam. Rất tiếc, tôi không thể trả lời câu hỏi của bạn về chủ đề này. Bạn có câu hỏi nào khác liên quan đến trồng trọt, sâu bệnh hoặc kỹ thuật nông nghiệp không?'"
+        "    3.  **STOP IMMEDIATELY.** Do not execute Rule 4."
+        "\n"
+        "--- Only execute the rule below IF RULE 1, 2, AND 3 DID NOT APPLY ---"
+        "\n"
+        "**RULE 4: ANSWER NORMAL AGRICULTURAL QUERIES (NO IMAGE, ON-TOPIC)**"
+        "\n"
+        "*   **CONDITION:** No `**Image Analysis Result:**` exists AND `{{ query }}` is related to agriculture."
+        "*   **ACTION:**"
+        "    *   Check `{{ memories }}` for a recently discussed **Context** (disease/topic)."
+        "    *   Answer `{{ query }}`: prioritize the **Context** (if available), otherwise answer generally."
+        "    *   Use `{{ documents }}` to find information relevant to the **Context** (if available) or directly relevant to `{{ query }}`."
+        "    *   Avoid video links."
+        "\n"
+        "**MOST CRITICAL REMINDERS:**"
+        "\n"
+        "1.  **ADHERE TO RULE ORDER: 1 -> 2 -> 3 -> 4.**"
+        "2.  **ALWAYS RESPOND IN VIETNAMESE.** THIS IS MANDATORY."
+        "3.  **RULE 1 IS ABSOLUTE:** When triggered, it overrides everything else and FORBIDS document usage."
+        "4.  **RULE 3 ALSO FORBIDS DOCUMENT USAGE** for off-topic questions."
+        "5.  Maintain **Context** once identified in Rule 2 or 4 for follow-up turns."
     ),
     ChatMessage.from_user(
-        """**Lịch sử trò chuyện (Để hiểu ngữ cảnh):**
+         """**Chat History:**
 {% for msg in memories %}
-  {% if msg.role == 'user' %}User: {{ (msg.to_dict()).content[0].text }} {% else %}Assistant: {{ (msg.to_dict()).content[0].text }} {% endif %}
+{% if msg.role == 'user' %}User: {{ (msg.to_dict()).content[0].text }}{% elif msg.role == 'assistant' %}Assistant: {{ (msg.to_dict()).content[0].text }}{% endif %}
+{% else %}
+(No chat history)
 {% endfor %}
 
 {% if identified_disease %}
-**Thông tin bổ sung (Từ Vision Model):** Trạng thái/Bệnh được xác định là: **{{ identified_disease }}**
+**Image Analysis Result:** {{ identified_disease }}
 {% endif %}
 
-**Tài liệu tham khảo (Chỉ dùng nếu câu hỏi liên quan và không phải trường hợp 'healthy'):**
-{% if documents and (not identified_disease or 'healthy' not in identified_disease.lower()) %} {# Chỉ hiển thị docs nếu cần RAG #}
+**Reference Documents:**
+{% if documents %}
     {% for doc in documents %}
     ---
-    Nội dung [{{ loop.index }}]: {{ doc.content }}
-    {% if doc.meta and doc.meta.tags %} (Thẻ: {{ doc.meta.tags | join(', ') }}) {% endif %}
+    {{ doc.content }}
     ---
     {% endfor %}
-{% elif identified_disease and 'healthy' not in identified_disease.lower() %}
-    (Không tìm thấy tài liệu trong cơ sở dữ liệu về "{{ identified_disease }}")
-{% elif not identified_disease %}
-     (Không tìm thấy tài liệu liên quan cho câu hỏi này trong cơ sở dữ liệu)
+{% else %}
+    (No reference documents)
 {% endif %}
 
-**Câu hỏi hiện tại của người dùng:** {{ query }}
+**User's Current Question:** {{ query }}
 
-**Câu trả lời của bạn (bằng tiếng Việt):**"""
+**Answer (Strictly follow ALL rules and critical reminders, RESPOND ONLY IN VIETNAMESE):**"""
     )
 ]
 chat_prompt_builder = ChatPromptBuilder(template=chat_prompt_template)
@@ -196,7 +219,7 @@ print("Initialized Adapters.")
 
 # -- LLM Generator (chính) --
 try:
-    llm_generator = OllamaGenerator(model=OLLAMA_MODEL_NAME, url=OLLAMA_URL, timeout=OLLAMA_TIMEOUT, generation_kwargs={"num_predict": 700, "temperature": 1, "top_p": 0.9})
+    llm_generator = OllamaGenerator(model=OLLAMA_MODEL_NAME, url=OLLAMA_URL, timeout=OLLAMA_TIMEOUT, generation_kwargs={"num_predict": 700, "temperature": 0.7, "top_p": 0.9})
     print("Initialized Main Ollama Generator.")
 except Exception as e: print(f"Error initializing Main Ollama Generator: {e}"); exit()
 
@@ -206,14 +229,11 @@ print("Initialized Answer Builder.")
 print("-------------------------------------\n")
 
 # --- 3. Xây dựng Pipeline ---
-print("--- Building Conversational RAG Pipeline with Query Rewriting ---")
+print("--- Building Pipeline (No Document Filter Component) ---")
 pipeline = Pipeline()
 
 # Thêm components
 pipeline.add_component("memory_retriever", memory_retriever)
-pipeline.add_component("query_rewrite_prompt_builder", query_rewrite_prompt_builder)
-pipeline.add_component("query_rewrite_llm", query_rewrite_llm_generator)
-pipeline.add_component("rewrite_output_adapter", rewrite_output_adapter)
 pipeline.add_component("text_embedder", text_embedder)
 pipeline.add_component("milvus_retriever", milvus_retriever)
 pipeline.add_component("bm25_retriever", bm25_retriever)
@@ -228,18 +248,11 @@ pipeline.add_component("memory_writer", memory_writer)
 pipeline.add_component("answer_builder", answer_builder)
 
 # --- Kết nối Pipeline ---
-pipeline.connect("memory_retriever.messages", "query_rewrite_prompt_builder.memories")
-pipeline.connect("query_rewrite_prompt_builder.prompt", "query_rewrite_llm.prompt")
-pipeline.connect("query_rewrite_llm.replies", "rewrite_output_adapter.replies")
-pipeline.connect("rewrite_output_adapter.output", "text_embedder.text")
-pipeline.connect("rewrite_output_adapter.output", "bm25_retriever.query")
-pipeline.connect("rewrite_output_adapter.output", "ranker.query")
 pipeline.connect("text_embedder.embedding", "milvus_retriever.query_embedding")
 pipeline.connect("milvus_retriever.documents", "joiner.documents")
 pipeline.connect("bm25_retriever.documents", "joiner.documents")
 pipeline.connect("joiner.documents", "ranker.documents")
 pipeline.connect("ranker.documents", "chat_prompt_builder.documents")
-pipeline.connect("ranker.documents", "answer_builder.documents")
 pipeline.connect("memory_retriever.messages", "chat_prompt_builder.memories")
 pipeline.connect("chat_prompt_builder.prompt", "message_to_string_adapter.messages")
 pipeline.connect("message_to_string_adapter.output", "llm.prompt")
@@ -247,8 +260,9 @@ pipeline.connect("llm.replies", "str_to_chat_converter.replies")
 pipeline.connect("str_to_chat_converter.messages", "memory_joiner.values")
 pipeline.connect("memory_joiner.values", "memory_writer.messages")
 pipeline.connect("llm.replies", "answer_builder.replies")
+pipeline.connect("ranker.documents", "answer_builder.documents")
 
-print("Pipeline built successfully.")
+print("Pipeline built successfully (without doc_filter).")
 print("-----------------------------\n")
 # --- 4. Chạy Pipeline ---
 print("\n--- Starting Conversation ---")
@@ -260,37 +274,35 @@ while True:
     if user_input_raw.lower() in ["quit", "exit"]:
         break
 
-    # --- THÊM: Parse Input để tách câu hỏi và tên bệnh ---
-    original_query = user_input_raw # Lưu lại input gốc
+    original_query = user_input_raw
     disease_name = None
-    # Sử dụng regex để tìm nội dung trong dấu ngoặc đơn cuối cùng
+    # Đơn giản chỉ trích xuất disease_name nếu có
     match = re.search(r'\(([^)]+)\)\s*$', user_input_raw)
     if match:
-        disease_name = match.group(1).strip() # Lấy tên bệnh
-        print(f"   (Debug: Identified disease: '{disease_name}')")
+        disease_name = match.group(1).strip()
 
-    query_for_rag = disease_name if disease_name else original_query
-
+    # Pipeline Input sử dụng original_query cho RAG
     pipeline_input = {
-        "query_rewrite_prompt_builder": {"query": original_query}, # Viết lại dựa trên câu hỏi gốc
+        "text_embedder": {"text": original_query},   # Luôn dùng original_query
+        "bm25_retriever": {"query": original_query}, # Luôn dùng original_query
+        "ranker": {"query": original_query},         # Luôn dùng original_query
         "chat_prompt_builder": {
-            "query": original_query,                             # Câu hỏi gốc vào prompt cuối
-            "identified_disease": disease_name                   # Tên bệnh đã xác định vào prompt cuối
+            "query": original_query,        # Gửi query gốc
+            "identified_disease": disease_name # Gửi disease_name (có thể là None)
         },
-        "memory_joiner": {"values": [ChatMessage.from_user(original_query)]}, # Ghi nhớ câu hỏi gốc
-        "answer_builder": {"query": original_query}              # Câu hỏi gốc cho output Answer
+        "memory_joiner": {"values": [ChatMessage.from_user(original_query)]},
+        "answer_builder": {"query": original_query}
     }
     try:
         start_run_time = time.time()
         result = pipeline.run(pipeline_input, include_outputs_from=["answer_builder"])
         end_run_time = time.time()
 
-        # Xử lý kết quả
         if "answer_builder" in result and result["answer_builder"]["answers"]:
-             final_answer = result["answer_builder"]["answers"][0]
-             print(f"🤖 Assistant: {final_answer.data}")
+            final_answer = result["answer_builder"]["answers"][0]
+            print(f"🤖 Assistant: {final_answer.data}")
         else:
-             print("🤖 Assistant: Xin lỗi, tôi không thể tạo câu trả lời.")
+            print("🤖 Assistant: Xin lỗi, tôi không thể tạo câu trả lời.")
 
     except Exception as e:
         print(f"\n--- An error occurred ---")
