@@ -48,7 +48,7 @@ MILVUS_TOP_K = 7
 ES_HOST = "http://127.0.0.1:9200"
 ES_INDEX_NAME = "my_rag_index"
 ES_BM25_TOP_K = 7
-RANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+RANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-12-v2"
 RANKER_FINAL_TOP_K = 5
 OLLAMA_MODEL_NAME = "llama3.1:8b-instruct-q8_0"
 # OLLAMA_MODEL_NAME = "llama3.1:8b-instruct-q6_K"
@@ -219,7 +219,7 @@ print("Initialized Adapters.")
 
 # -- LLM Generator (chính) --
 try:
-    llm_generator = OllamaGenerator(model=OLLAMA_MODEL_NAME, url=OLLAMA_URL, timeout=OLLAMA_TIMEOUT, generation_kwargs={"num_predict": 700, "temperature": 0.7, "top_p": 0.9})
+    llm_generator = OllamaGenerator(model=OLLAMA_MODEL_NAME, url=OLLAMA_URL, timeout=OLLAMA_TIMEOUT, generation_kwargs={"num_predict": 700, "temperature": 0.8, "top_p": 0.9})
     print("Initialized Main Ollama Generator.")
 except Exception as e: print(f"Error initializing Main Ollama Generator: {e}"); exit()
 
