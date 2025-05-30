@@ -75,7 +75,7 @@ hf_token = get_env_var("HF_TOKEN", is_critical=False)
 MILVUS_URI = get_env_var("MILVUS_HOST", default_value="http://localhost:19530")
 ES_HOST = get_env_var("ES_HOST", default_value="http://127.0.0.1:9200")
 OLLAMA_URL = get_env_var("OLLAMA_URL", default_value="http://localhost:11434")
-OLLAMA_MODEL_NAME = get_env_var("OLLAMA_MODEL", default_value="llama3.1:8b-instruct-q8_0")
+OLLAMA_MODEL_NAME = get_env_var("OLLAMA_MODEL", default_value="gemma3:latest")
 GOOGLE_API_KEY = get_env_var("GOOGLE_API_KEY") # Critical for Ragas AI Studio
 GOOGLE_AI_MODEL_NAME_RAGAS = get_env_var("GOOGLE_AI_MODEL_NAME_RAGAS", default_value="gemini-1.5-flash-latest")
 
