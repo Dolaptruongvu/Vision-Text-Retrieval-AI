@@ -1,0 +1,417 @@
+[
+  {
+    "question": "Bệnh này là bệnh gì?(Potato Late blight)",
+    "ground_truth": "là bệnh mốc sương muộn trên khoai tây."
+  },
+  {
+    "question": "Triệu chứng của bệnh mốc sương muộn ở khoai tây là gì?",
+    "ground_truth": "thối rữa nhanh chóng, chảy nước của lá,sau đó nhanh chóng tàn, nhăn nheo và chuyển sang màu nâu.khi mầm bệnh đang tích cực lây lan qua các mô lá,các cạnh của tổn thương có thể có màu xanh lục nhạt và có thể thấy sự phát triển 'nấm' màu trắng mịn ở mặt dưới của lá"
+  },
+  {
+    "question": "Biểu hiện của bệnh mốc sương muộn trên cà chua là gì(Tomato Late blight)",
+    "ground_truth": "lá bị thối úng nước lan nhanh, sau đó nhanh chóng rũ xuống, nhăn nheo và chuyển sang màu nâu. Khi mầm bệnh lây lan tích cực qua các mô lá, các cạnh của vết bệnh có thể có màu xanh lục nhạt và có thể thấy sự phát triển 'nấm' màu trắng mịn ở mặt dưới của lá."
+  },
+  {
+    "question": "Bệnh mốc sương muộn lây lan và tồn tại như nào?",
+    "ground_truth": "Mầm bệnh là một sinh vật giống nấm hiển vi, bào tử (sporangia) của nó dễ dàng tách ra khỏi tán lá bị nhiễm bệnh và có thể bị gió thổi đi xa. Để nhiễm trùng xảy ra, cần có độ ẩm bề mặt kéo dài (vài giờ); đây là lý do tại sao bệnh này rất nghiêm trọng trong mùa hè ẩm ướt."
+  },
+  {
+    "question": "Đây là biểu hiện của bệnh gì?(Pepper bell bacterial spot)",
+    "ground_truth": "đây là bệnh đốm lá vi khuẩn ở tiêu."
+  },
+  {
+    "question": "Biểu hiện của bệnh này là gì?(Pepper bell bacterial spot)",
+    "ground_truth": "có điểm đặc trưng là các đốm hoại tử nhỏ trên các lá ở tầng thấp sát với bề mặt đất. Các đốm ấy xuất hiện rất nhiều và có kích cỡ như lỗ kim."
+  },
+  {
+    "question": "Nguyên nhân gây bệnh đốm lá vi khuẩn trên cây trồng là gì?",
+    "ground_truth": "Bệnh đốm lá vi khuẩn do vi khuẩn Pseudomonas syringae pv. syringae gây ra."
+  },
+  {
+    "question": "Cách phòng ngừa bệnh đốm lá vi khuẩn trên cây trồng?",
+    "ground_truth": "Sử dụng các giống cây bụi với tương đối ít gai để ngăn ngừa tổn thương do gió, Lên kế hoạch đặt chắn gió để bảo vệ cây khỏi gió lớn, Cắt tỉa cành cây chết hoặc bị bệnh vào mùa xuân sau giai đoạn mưa nhiều để giảm thiểu lây lan của bệnh."
+  },
+  {
+    "question": "Biểu hiển của bệnh do virus xoăn vàng lá trên cây cà chua?(Tomato YellowLeaf Curl Virus)",
+    "ground_truth": "các lá non sẽ bị cong và có màu xanh lục nhạt. Ngoài ra, toàn bộ cây có thể biểu hiện còi cọc, mép lá vàng, gân lá màu tím ở mặt dưới lá và giảm sản lượng quả."
+  },
+  {
+    "question": "Triệu chứng của cây trồng bị nhiễm virus xoăn vàng lá là gì?",
+    "ground_truth": "khiến lá bị vàng và xoăn lại, lá có thể nhỏ hơn dự kiến ​​và sẽ cuộn lên trên. Hoa có nhiều khả năng rụng hơn, dẫn đến ít quả hơn."
+  },
+  {
+    "question": "Triệu trứng của cây trồng nhiễm virus khảm",
+    "ground_truth": "Lá có thể bị xoăn, các lá chét mới nhỏ và quả bị nhiễm bệnh có màu nâu bên trong. Sự phát triển nói chung có thể có màu nhạt. Quả có thể có vẻ ngoài khảm (màu sắc xen kẽ) trên vỏ."
+  },
+  {
+    "question": "Con đường lây lan của virus khảm trên cây trồng như thế nào?",
+    "ground_truth": "Virus khảm lây truyền theo nhiều cách, bao gồm hạt giống, ghép cây, sâu bệnh hoặc do tay người xử lý.Đây cũng là một loại virus khó tiêu diệt vì nó tồn tại trong tàn dư thực vật hơn 50 năm."
+  },
+  {
+    "question": "Phân tích xem bệnh này là bệnh gì?(Tomato Septoria Leaf Spot)",
+    "ground_truth": "Bệnh đốm lá Septoria trên cà chua. Bệnh này phổ biến ở nhiều vùng trồng cà chua, đặc biệt khi thời tiết ẩm ướt kéo dài."
+  },
+  {
+    "question": "Triệu chứng của bệnh đốm lá Septoria là gì?",
+    "ground_truth": "bao gồm các đốm nhỏ, tròn, úng nước trên lá, thường bắt đầu từ các lá già phía dưới. Vết bệnh sau đó lớn dần, có tâm màu xám tro hoặc nâu nhạt, viền đậm, và xuất hiện các chấm đen nhỏ li ti (ổ bào tử nấm) ở trung tâm."
+  },
+  {
+    "question": "Hậu quả của bệnh đốm là Septoria gây ra cho cây cà chua là gì?",
+    "ground_truth": "có thể làm lá bị vàng úa, khô cháy và rụng hàng loạt từ gốc lên ngọn, khiến cây trơ trụi, giảm khả năng quang hợp, ảnh hưởng nghiêm trọng đến sự phát triển và năng suất quả."
+  },
+  {
+    "question": "Cách phòng ngừa bệnh đốm lá Septoria",
+    "ground_truth": "Bao gồm luân canh, vệ sinh đồng ruộng, tiêu hủy tàn dư cây bệnh, tránh tưới nước lên lá vào buổi chiều tối, và phun thuốc trừ nấm chứa hoạt chất Chlorothalonil, Mancozeb hoặc các thuốc nhóm Strobilurin."
+  },
+  {
+    "question": "Nguyên nhân nào gây lên bệnh này?(Tomato Leaf Mold)",
+    "ground_truth": "Bệnh mốc lá trên cà chua chủ yếu do nấm Passalora fulva (trước đây là Fulvia fulva hoặc Cladosporium fulvum) gây ra. Bệnh phát triển mạnh trong điều kiện nhà kính có ẩm độ không khí cao."
+  },
+  {
+    "question": "Triệu chứng của bệnh mốc lá trên cây trồng là gì",
+    "ground_truth": "Triệu chứng bệnh mốc lá thường bắt đầu ở mặt dưới lá cà chua với các đốm mốc màu xanh vàng hoặc xám nhạt, sau chuyển sang màu nâu. Mặt trên lá tương ứng với các đốm mốc này là các vùng bị vàng nhạt."
+  },
+  {
+    "question": "Biểu hiện của bệnh này là gì(Tomato Leaf Mold)",
+    "ground_truth": "lá bị vàng, khô và rụng sớm, ảnh hưởng đến khả năng quang hợp và năng suất cà chua. Bệnh ít khi tấn công trực tiếp vào quả."
+  },
+  {
+    "question": "Nguyên nhân nào gây ra bênh này (Potato Early blight)",
+    "ground_truth": "Nấm Alternaria solani gây bệnh đốm vòng , nó có thể tồn tại trong đất và trên tàn dư cây trồng trong vài năm"
+  },
+  {
+    "question": "Cách phòng ngừa bệnh đốm vòng",
+    "ground_truth": "luân canh cây trồng là biện pháp phòng ngừa bệnh đốm vòng quan trọng"
+  },
+  {
+    "question": "Lá có các vùng màu xanh đậm và nhạt xen kẽ, tạo hình ảnh loang lổ là bệnh gì?(Tomato mosaic virus)",
+    "ground_truth": "Đây là bệnh khảm cà chua"
+  },
+  {
+    "question": "Bệnh mốc sương muộn ở khoai tây do tác nhân nào gây ra",
+    "ground_truth": "một bệnh do một sinh vật giống nấm (Oomycete) (_Phytophthora infestans_) gây ra, lây lan nhanh chóng qua lá và củ khoai tây trong thời tiết ấm áp, ẩm ướt, gây ra sự suy tàn và thối rữa."
+  },
+  {
+    "question": "Cách vi khuẩn xâm nhập gây ra bệnh này là gì?(Pepper bell bacterial spot)",
+    "ground_truth": " Những vi khuẩn Leptosphaerulina arachidicola  thường trú ngụ trên bề mặt lá và trở thành mầm bệnh khi thời kỳ ẩm ướt kéo dài. Vi khuẩn xâm nhập vào các mô thực vật thông qua các lỗ chân lông tự nhiên, tổn thương lá hoặc qua các vết thương trên thân cây."
+  },
+  {
+    "question": "Triệu chứng của bệnh đốm vòng trên cà chua là gì?",
+    "ground_truth": "Đốm nâu đen có vòng đồng tâm trên lá, quả cà chua."
+  },
+  {
+    "question": "Nguyên nhân dẫn tới bệnh này là gì?(Potato Late blight)",
+    "ground_truth": "Do sinh vật giống nấm hiển vi gây ra. Bào tử của nó dễ dàng phát tán nhờ gió, và để gây nhiễm bệnh, cần có độ ẩm bề mặt kéo dài. Bệnh lây lan nhanh chóng qua mô thực vật, đặc biệt nghiêm trọng trong mùa hè ẩm ướt."
+  },
+  {
+    "question": "Bệnh đốm lá vi khuẩn ở ớt lây lan qua đâu?",
+    "ground_truth": "Bệnh lây lan qua mưa tạt và khi làm việc với cây bị nhiễm bệnh khi còn ướt. Bệnh có thể tồn tại trên hạt giống, cây con và tàn dư cây trồng trong đất."
+  },
+  {
+    "question": "Cách phòng ngừa bệnh này là gì?(Pepper bell bacterial spot)",
+    "ground_truth": "Chọn giống kháng bệnh, mua hạt giống và cây con không bệnh, xử lý hạt giống bằng cách ngâm trong dung dịch thuốc tẩy clo 10% (1 phần thuốc tẩy; 9 phần nước) trong 2 phút, phủ lớp phủ dày bằng vật liệu hữu cơ như báo phủ rơm hoặc cỏ vụn, loại bỏ và tiêu hủy các bộ phận cây bị nhiễm bệnh nặng và tất cả các mảnh vụn vào cuối mùa."
+  },
+   {
+    "question": "Nguyên nhân gây ra bênh này là gì?(Tomato Septoria Leaf Spot)",
+    "ground_truth": "Do nấm Septoria lycopersici gây ra."
+  },
+  {
+    "question": "Cách phòng ngừa bệnh khảm trên cây cà chua",
+    "ground_truth": "Để phòng ngừa bệnh cho cây cà chua, bạn nên sử dụng hạt giống khỏe mạnh. Điều quan trọng là phải luân canh cây trồng, tức là không trồng cà chua trên cùng một mảnh đất mỗi năm, để ngăn chặn mầm bệnh và sâu bệnh tích tụ trong đất. Cuối cùng, hãy luôn đảm bảo đất sạch mầm bệnh và đủ dinh dưỡng."
+  },
+  {
+    "question": "Nguyên nhân gây ra bệnh này là gì?(Pepper bell bacterial spot)",
+    "ground_truth": "Do nấm Leptosphaerulina arachidicola gây ra."
+  },
+  {
+    "question": "Nguyên nhân gây ra bệnh này ở và chua(Tomato Septoria Leaf Spot)",
+    "ground_truth": "Do một loại nấm gây ra, _Septoria lycopersici._ Mầm bệnh được ưa chuộng bởi thời tiết ẩm ướt."
+  },
+
+
+
+
+
+  {
+    "question": "Cây này có vấn đề gì với lá vậy? (Tomatom Septoria leaf spot)",
+    "ground_truth": "Bệnh đốm lá Septoria ở cà chua gây ra các đốm nâu tròn, có tâm đen và quầng vàng, thường xuất hiện ở lá già trước."
+  },
+  {
+    "question": "Lá bị vàng, xoăn và cây phát triển kém. Đây là gì vậy? (Tomato_Tomato Yellow Leaf Curl Virus)",
+    "ground_truth": "Đây là triệu chứng của bệnh virus xoăn vàng lá cà chua, làm cây còi cọc, lá biến dạng, hoa dễ rụng và ít trái."
+  },
+  {
+    "question": "Lá và quả có vết lạ, màu sẫm, có phải đang bị sâu bệnh gì không? (Tomato Bacterial spot)",
+    "ground_truth": "Bệnh đốm vi khuẩn cà chua do vi khuẩn Xanthomonas gây ra, làm loét lá, thân và quả."
+  },
+  {
+    "question": "Trên lá khoai tây có vết đen, lan rất nhanh sau khi mưa. Bị gì vậy? (Potato Late blight)",
+    "ground_truth": "Là bệnh mốc sương muộn – vết thối ướt lan rộng, kèm mốc trắng dưới lá, làm cây tàn nhanh."
+  },
+  {
+    "question": "Lá khoai tây có vết tròn đồng tâm màu nâu. Hiện tượng này là gì? (Potato Early blight)",
+    "ground_truth": "Là bệnh cháy sớm – các đốm tròn đồng tâm trên lá già, lan dần lên phần thân và ảnh hưởng đến củ."
+  },
+  {
+    "question": "Lá cà chua có mốc trắng dưới mặt lá và hơi vàng ở mặt trên. Đây là gì? (Tomato Leaf Mold)",
+    "ground_truth": "Đây là bệnh mốc lá cà chua do nấm Fulvia fulva, thường phát triển trong điều kiện ẩm thấp và thiếu thông thoáng."
+  },
+  {
+    "question": "Lá cây bị chấm trắng li ti và khô héo dần. Có vấn đề gì không? (Tomato Spider mites Two-spotted spider mite)",
+    "ground_truth": "Là do bọ ve hai chấm tấn công – loài nhện nhỏ tạo mạng nhện, làm lá úa và biến dạng."
+  },
+  {
+    "question": "Trên lá xuất hiện vết nâu có hình như vòng tròn đồng tâm. Cây bị gì vậy? (Tomato Target Spot)",
+    "ground_truth": "Đó là triệu chứng của bệnh đốm mục tiêu, ảnh hưởng đến lá, cuống và thân."
+  },
+  {
+    "question": "Lá khảm màu lốm đốm và cây phát triển chậm. Là bệnh gì? (Tomato mosaic virus)",
+    "ground_truth": "Cây đang nhiễm virus khảm cà chua (ToMV), gây lá khảm, xoăn và giảm phát triển."
+  },
+  {
+    "question": "Lá ớt có đốm nâu lõm và bắt đầu vàng. Đây là biểu hiện của bệnh gì? (Pepper bell Bacterial spot)",
+    "ground_truth": "Đây là bệnh đốm vi khuẩn ớt chuông, thường bắt đầu từ lá thấp và lây nhanh sang quả."
+  },
+  {
+    "question": "Cây cà chua rụng lá sớm, nhất là các lá ở gốc. Là vấn đề gì vậy? (Tomato Septoria leaf spot)",
+    "ground_truth": "Là bệnh đốm lá Septoria – bắt đầu từ lá già, gây rụng lá và giảm năng suất rõ rệt."
+  },
+  {
+    "question": "Lá khoai tây bị đốm sẫm có viền sáng quanh mép. Cây bị gì vậy? (Potato Late blight)",
+    "ground_truth": "Đó là triệu chứng của bệnh mốc sương muộn – vết đen lan nhanh, kèm nấm trắng dưới mặt lá."
+  },
+  {
+    "question": "Lá có màu vàng và mặt dưới có mốc trắng mịn. Có nguy hiểm không? (Tomato Leaf Mold)",
+    "ground_truth": "Đó là biểu hiện mốc lá – một bệnh nấm làm giảm khả năng quang hợp và dễ lây lan trong môi trường ẩm."
+  },
+  {
+    "question": "Quả cà chua có vết lõm màu nâu, trông mất thẩm mỹ. Có sao không? (Tomato Bacterial spot)",
+    "ground_truth": "Đó là dấu hiệu của bệnh đốm vi khuẩn – ảnh hưởng đến chất lượng và giá trị thương phẩm của quả."
+  },
+  {
+    "question": "Thân khoai tây xuất hiện đốm đen. Đây có phải là triệu chứng bệnh gì không? (Potato Early blight)",
+    "ground_truth": "Đúng, đó là bệnh cháy sớm, gây đốm dài trên thân và làm cây yếu, dễ đổ ngã."
+  },
+  {
+    "question": "Lá có các chấm nhỏ màu đen xuất hiện nhiều. Có gì nguy hiểm không? (Tomato Septoria leaf spot)",
+    "ground_truth": "Đây là bệnh đốm lá Septoria – các đốm mọc dày, lan rộng và làm lá rụng sớm."
+  },
+  {
+    "question": "Lá cây khô dần và thấy mạng nhện mỏng. Có thể là gì? (Tomato Spider mites Two-spotted spider mite)",
+    "ground_truth": "Bọ ve hai chấm là thủ phạm – chúng hút nhựa và làm cây mất nước, dẫn đến khô và chết lá."
+  },
+  {
+    "question": "Cây ra trái méo mó, ít trái hơn bình thường. Có phải bị bệnh không? (Tomato Yellow Leaf Curl Virus)",
+    "ground_truth": "Đó là biểu hiện của virus xoăn vàng lá – gây rụng hoa, ít trái và trái dị dạng."
+  },
+  {
+    "question": "Lá cây có mảng sáng tối xen kẽ như bị bạc màu. Là gì vậy? (Tomato Tomato mosaic virus)",
+    "ground_truth": "Cây nhiễm virus khảm cà chua (ToMV), khiến lá khảm màu, xoăn lại và kém phát triển."
+  },
+  {
+    "question": "Lá bị hoại tử nhẹ và viền lá chuyển vàng. Bệnh gì gây ra vậy? (Pepper bell Bacterial spot)",
+    "ground_truth": "Đó là triệu chứng bệnh đốm vi khuẩn ớt chuông, thường do Xanthomonas gây ra, dễ lây qua nước tưới."
+  },
+  {
+    "question": "Tại sao bệnh cháy sớm ở khoai tây thường khởi phát trên các lá già?",
+    "ground_truth": "Vì nấm Alternaria solani gây cháy sớm thường tấn công mô yếu trước, nên triệu chứng đầu tiên thường xuất hiện ở lá già gần gốc cây."
+  },
+  {
+    "question": "Bệnh xoăn vàng lá ở cà chua ảnh hưởng đến năng suất như thế nào?",
+    "ground_truth": "Bệnh này khiến cây phát triển kém, ra hoa ít hoặc không đậu trái, làm giảm năng suất nghiêm trọng."
+  },
+  {
+    "question": "Làm sao để phân biệt mốc lá với các bệnh đốm lá khác ở cà chua?",
+    "ground_truth": "Mốc lá có vết màu vàng ở mặt trên lá và lớp nấm mốc trắng hoặc xám nhạt ở mặt dưới, khác với các bệnh đốm có đường viền rõ."
+  },
+  {
+    "question": "Loại sâu bệnh nào gây nên tình trạng lá xoăn, chấm trắng và có mạng nhện ở mặt dưới lá cà chua?",
+    "ground_truth": "Đó là bọ ve hai chấm, một loài nhện nhỏ hút nhựa lá và tạo mạng nhện rất đặc trưng."
+  },
+  {
+    "question": "Virus khảm cà chua lây lan như thế nào?",
+    "ground_truth": "Lây lan qua tiếp xúc cơ giới, hạt giống nhiễm bệnh hoặc qua côn trùng môi giới như bọ phấn."
+  },
+  {
+    "question": "Bệnh đốm mục tiêu cà chua phát triển mạnh khi nào?",
+    "ground_truth": "Phát triển mạnh trong điều kiện ẩm ướt, nhiệt độ cao, và khi cây bị căng thẳng."
+  },
+  {
+    "question": "Cây cà chua của tôi bị các đốm nước ngâm trên lá, sau đó khô và rụng. Đây có phải là bệnh vi khuẩn không?",
+    "ground_truth": "Đúng, đó là dấu hiệu của bệnh đốm vi khuẩn cà chua, gây bởi vi khuẩn Xanthomonas spp."
+  },
+  {
+    "question": "Tại sao bệnh mốc sương muộn nguy hiểm cho khoai tây và cà chua?",
+    "ground_truth": "Vì nó lan nhanh, gây thối rữa mô lá và thân, đặc biệt trong điều kiện ẩm – làm mất trắng năng suất nếu không kiểm soát."
+  },
+  {
+    "question": "Cách nhận diện bệnh đốm Septoria khác gì với bệnh đốm mục tiêu?",
+    "ground_truth": "Septoria tạo các đốm nhỏ, có tâm đen và quầng vàng; còn đốm mục tiêu có vòng đồng tâm rõ như mắt bắn bia."
+  },
+  {
+    "question": "Bệnh khảm ảnh hưởng đến cây như thế nào trong giai đoạn ra hoa?",
+    "ground_truth": "Làm biến dạng lá và thân, giảm khả năng đậu trái, gây tổn thất lớn trong giai đoạn ra hoa."
+  },
+  {
+    "question": "Bệnh cháy sớm ảnh hưởng đến năng suất khoai tây ra sao?",
+    "ground_truth": "Giảm diện tích lá quang hợp, ảnh hưởng đến sự phát triển của củ, từ đó làm giảm năng suất nghiêm trọng."
+  },
+  {
+    "question": "Tại sao bệnh khảm khó kiểm soát trên cây cà chua?",
+    "ground_truth": "Vì nó không có thuốc chữa, dễ lây lan qua dụng cụ, côn trùng và hạt giống, chỉ có thể ngăn ngừa qua giống sạch bệnh và biện pháp canh tác."
+  },
+  {
+    "question": "Vết sưng nhỏ, lõm vào trên lá và thân cây cà chua là dấu hiệu của điều gì? (Tomato Target Spot)",
+    "ground_truth": "Là dấu hiệu đốm mục tiêu – một bệnh nấm gây ảnh hưởng đến cả lá và thân cây cà chua."
+  },
+  {
+    "question": "Virus xoăn vàng lá thường lây qua con gì?",
+    "ground_truth": "Thường lây lan qua bọ phấn trắng – côn trùng hút nhựa truyền virus từ cây bệnh sang cây khỏe."
+  },
+
+
+
+  
+  
+
+  {
+    "question": "Triệu chứng điển hình của bệnh xoăn lá là gì?",
+    "ground_truth": "Bệnh xoăn lá cà chua biểu hiện bằng hiện tượng vàng lá, lá cuộn lên trên, cây mọc rậm rạp, lá bị biến dạng, bề mặt lá co lại, cây còi cọc, phân nhánh quá mức, cây phát triển bất thường và rụng hoa và quả."
+  },
+  {
+    "question": "Bệnh đốm vòng do tác nhân nào gây ra?",
+    "ground_truth": "Bệnh đốm vòng do nấm Alternaria solani gây ra. Nấm này cũng gây hại trên cà chua, ớt chuông và các cây họ cà khác."
+  },
+  {
+    "question": "Triệu chứng điển hình của bệnh bạc lá là gì?",
+    "ground_truth": "Trên củ khoai tây, bệnh tạo ra các hạch nấm nhỏ màu đen, có thể nhìn thấy bằng kính 10X. Các triệu chứng dễ bị nhầm với bệnh cháy sớm."
+  },
+  {
+    "question": "Bệnh cháy lá do tác nhân nào gây ra?",
+    "ground_truth": "Các đốm nhỏ sẫm màu xuất hiện trên lá, sau đó lan rộng thành bệnh cháy lá. Tác nhân có thể là vi khuẩn, đặc biệt thấy trên cây ớt và cà chua."
+  },
+  {
+    "question": "Bệnh phấn trắng do tác nhân nào gây ra?",
+    "ground_truth": "Trên đậu Hà Lan, bệnh phấn trắng là do nấm gây ra, thường phát triển dạng lớp bột trắng phủ trên bề mặt lá và thân cây."
+  },
+  {
+    "question": "Có biện pháp nào giúp phòng ngừa bệnh đốm vi khuẩn không?",
+    "ground_truth": "Ta có thể thực hiện các biện pháp như cung cấp các biện pháp kiểm soát bệnh đốm vi khuẩn bằng kỹ thuật canh tác, vật lý và sử dụng thuốc trừ sâu."
+  },
+  {
+    "question": "Có biện pháp nào giúp phòng ngừa bệnh cháy lá không?",
+    "ground_truth": "Để kiểm soát bệnh cháy lá Phytophthora và các bệnh khác trong đất, cần giảm làm đất, luân canh cây trồng, sử dụng giống kháng, đánh giá thuốc trừ nấm và phương pháp sinh học."
+  },
+  {
+    "question": "Bệnh xoăn lá gây thiệt hại như thế nào cho cây trồng?",
+    "ground_truth": "Virus xoăn lá cà chua (TLCV) có thể gây thiệt hại năng suất đến 100%. Đây là bệnh virus nghiêm trọng nhất với cà chua tại nhiều vùng, do bọ phấn truyền."
+  },
+  {
+    "question": "Bệnh bạc lá gây thiệt hại như thế nào cho cây trồng?",
+    "ground_truth": "Bệnh gây các hạch nấm nhỏ màu đen trên củ khoai tây, dễ nhầm với bệnh khác và ảnh hưởng đến chất lượng nông sản."
+  },
+  {
+    "question": "Bệnh vàng lá gây thiệt hại như thế nào cho cây trồng?",
+    "ground_truth": "Gây vàng lá, héo rũ, làm giảm năng suất đáng kể trên cây họ thập tự như bắp cải, cải xoăn, súp lơ..."
+  },
+  {
+    "question": "Bệnh phấn trắng gây thiệt hại như thế nào cho cây trồng?",
+    "ground_truth": "Bệnh gây rụng lá, làm giảm khả năng quang hợp, phát triển mạnh trong điều kiện ẩm và ảnh hưởng nghiêm trọng đến cây họ bầu bí."
+  },
+  {
+    "question": "Biểu hiện của bệnh này là gì?(Tomato Early blight)",
+    "ground_truth": "Các loại bệnh cháy lá cà chua khác nhau và cách phân biệt chúng, bao gồm cháy sớm (do Alternaria solani) có các đốm tròn đồng tâm trên lá, lan rộng làm lá khô và rụng từ dưới lên. Trên thân cũng có thể xuất hiện đốm dài sẫm màu."
+  },
+  {
+    "question": "Biểu hiện của bệnh đốm vòng là gì?(Early Blight)",
+    "ground_truth": "Bệnh bắt đầu bằng đốm nâu tròn có vòng đồng tâm trên lá, sau đó lan rộng làm lá vàng, khô và rụng. Trên thân có đốm dài, trên củ có vết lõm sẫm màu hình tròn, dễ bị nấm phụ gây thối."
+  },
+  {
+    "question": "Biểu hiện của bệnh này là gì? (Tomato Leaf Mold)",
+    "ground_truth": "Trên mặt dưới của lá có mốc nâu – xám, lá cong lên và chuyển vàng. Mặt trên có thể thấy vết ố. Bệnh phát triển mạnh trong điều kiện độ ẩm cao, cây dễ rụng lá sớm."
+  },
+  {
+    "question": "Biểu hiện của bệnh này là gì? (Tomato mosaic virus)",
+    "ground_truth": "Cây cà chua nhiễm virus khảm có thể có lá biến dạng, hoa rụng, quả nhỏ và méo. Virus làm rối loạn quá trình tổng hợp diệp lục, tạo nên các đốm vàng – xanh loang lổ như hình mozaic."
+  },
+  {
+    "question": "Biểu hiện của bệnh này là gì?(Potato Late blight)",
+    "ground_truth": "Bệnh mốc sương muộn do Phytophthora infestans gây ra, tạo vùng thối nâu tím trên củ và lan dần vào bên trong. Thịt củ bị thối màu nâu đỏ, không đều, dẫn đến suy yếu và dễ bị vi khuẩn cơ hội tấn công."
+  },
+  {
+    "question": "Biểu hiện của bệnh này là gì?(Tomato Late blight)",
+    "ground_truth": "Xuất hiện vùng thối sẫm màu trên lá, thân, và củ. Thịt củ bị thối nâu đỏ, lan nhanh trong điều kiện ẩm ướt và gió."
+  },
+  {
+    "question": "Làm thế nào để kiểm soát bệnh Potato Late blight?",
+    "ground_truth": "Bệnh mốc sương muộn vẫn là bệnh khoai tây quan trọng nhất ở hầu hết các vùng trồng khoai tây. Việc quản lý bệnh bao gồm việc sử dụng giống kháng, lịch phun thuốc hợp lý và giảm thiểu các nguồn lây bệnh từ mùa trước như cây tình nguyện và củ giống bị nhiễm bệnh."
+  },
+  {
+    "question": "Làm thế nào để kiểm soát bệnh Tomato septoria leaf spot?",
+    "ground_truth": "Septoria leaf spot là một bệnh rất phổ biến ở cà chua, đặc biệt trong điều kiện ẩm ướt. Việc kiểm soát hiệu quả bao gồm việc luân canh cây trồng, tránh làm ướt tán lá, sử dụng thuốc bảo vệ thực vật phù hợp và loại bỏ lá bệnh."
+  },
+  {
+    "question": "Bệnh đốm lá thường xuất hiện trong điều kiện nào?",
+    "ground_truth": "Quản lý tốt nhất bệnh đốm lá vi khuẩn trên cây ớt có thể đạt được thông qua một chiến lược tổng hợp vì người ta thấy rằng một biện pháp duy nhất, chẳng hạn như xử lý hạt giống, không kiểm soát đầy đủ đốm vi khuẩn (Stall et al., 2009). Chiến lược tổng hợp này bao gồm tất cả các phương pháp được đề cập ở trên, ngoài việc trinh sát đồng ruộng để định thời gian xử lý, loại bỏ cây bị nhiễm bệnh để giảm sự lây lan của vi khuẩn và định thời gian các hoạt động cơ giới và lao động để xảy ra vào thời điểm nguy cơ lây lan vi khuẩn đốm lá thấp."
+  },
+  {
+    "question": "Vì sao cần tưới nước hợp lý để phòng sâu bệnh?",
+    "ground_truth": "Tưới nước đúng cách giúp cây phát triển khỏe mạnh, tăng sức đề kháng. Đất quá khô khiến cây yếu, dễ bị sâu bệnh tấn công, trong khi đất quá ẩm lại tạo điều kiện cho vi khuẩn và nấm bệnh sinh sôi mạnh."
+  },
+  {
+    "question": "Vai trò của thiên địch trong phòng trừ sâu bệnh là gì?",
+    "ground_truth": "Thiên địch như ong ký sinh, bọ xít ăn thịt giúp kiểm soát quần thể sâu hại một cách tự nhiên, bền vững và giảm nhu cầu sử dụng thuốc hóa học."
+  },
+  {
+    "question": "Mưa dầm kéo dài gây ảnh hưởng gì đến sâu bệnh?",
+    "ground_truth": "Mưa dầm tạo điều kiện lý tưởng cho nấm bệnh phát triển mạnh, đồng thời làm trôi thuốc bảo vệ thực vật đã phun, khiến phòng trừ sâu bệnh kém hiệu quả."
+  },
+  {
+    "question": "Ưu điểm của máy bay nông nghiệp trong phòng sâu bệnh là gì?",
+    "ground_truth": "Máy bay không người lái có thể phun thuốc đều, chính xác trên diện rộng. Điều này giúp tiết kiệm thời gian, công sức và giảm tiếp xúc trực tiếp với thuốc bảo vệ thực vật, đồng thời nâng cao hiệu quả bảo vệ mùa màng."
+  },
+  {
+    "question": "Bệnh vàng lá ảnh hưởng như thế nào đến cây trồng?",
+    "ground_truth": "Các dấu hiệu của PepRSV bao gồm các đốm hình vòng trên củ và hiện tượng hóa nâu bên trong theo hình vòng. Trên lá, virus biểu hiện dưới dạng vàng lá. Nó cũng thường xuất hiện dưới dạng nhiễm trùng tiềm ẩn và có thể bị nhầm lẫn với hiện tượng hóa nâu bên trong."
+  },
+  {
+    "question": "Khi nào nên sử dụng thuốc sinh học để phòng bệnh cho cây?",
+    "ground_truth": "Nên sử dụng thuốc sinh học vào đầu vụ hoặc khi cây vừa có dấu hiệu nhẹ, nhằm ngăn ngừa bệnh phát triển mà không gây tồn dư hóa chất."
+  },
+  {
+    "question": "Bệnh héo xanh vi khuẩn ở cà chua gây hại như thế nào?",
+    "ground_truth": "Cây đang phát triển bình thường đột ngột héo rũ vào ban ngày nhưng hồi phục ban đêm, sau vài ngày héo hoàn toàn, phần gốc có thể thấy dịch nhầy trắng đục."
+  },
+  {
+    "question": "Biện pháp nào hiệu quả nhất để phòng bệnh vi khuẩn cho cây trồng?",
+    "ground_truth": "Sử dụng giống kháng bệnh, luân canh cây trồng, xử lý đất và dùng thuốc sinh học hoặc đồng hữu cơ để ức chế vi khuẩn phát triển."
+  },
+  {
+    "question": "Tại sao cần cắt bỏ lá bệnh khi phát hiện sớm?",
+    "ground_truth": "Việc cắt bỏ lá bệnh giúp ngăn bệnh lây lan sang các phần khỏe mạnh, giảm nguồn lây lan, tạo điều kiện cho cây phục hồi và hạn chế dùng thuốc."
+  },
+  {
+    "question": "Tại sao nên dùng máy bay phun thuốc công nghệ ly tâm trong phòng trừ sâu bệnh?",
+    "ground_truth": "Vì công nghệ phun ly tâm tạo hạt thuốc siêu mịn 60–400 µm, bám sâu vào cả mặt trên và dưới lá, giúp tiêu diệt sâu bệnh hiệu quả đến 99,9%."
+  },
+  {
+    "question": "Cây khoai tây bị bệnh cháy lá muộn thường có biểu hiện gì?",
+    "ground_truth": "Lá có vết đốm nâu lan rộng rất nhanh, bề mặt lá bị cháy đen và xoăn lại, mặt dưới có lớp mốc trắng mịn, bệnh lây nhanh khi ẩm ướt."
+  },
+  {
+    "question": "Những dấu hiệu ban đầu khi cây bị nhiễm virus khảm lá là gì?",
+    "ground_truth": "Lá non có màu loang lổ xanh vàng, mép lá cong lên hoặc xoăn lại, phiến lá biến dạng, cây chậm phát triển, còi cọc và cho năng suất thấp."
+  },
+  {
+    "question": "Khi cây bị rệp tấn công, triệu chứng nào thường gặp trên lá?",
+    "ground_truth": "Lá bị cong queo, vàng úa, có thể có dịch dính do rệp tiết ra, cây sinh trưởng chậm, có thể bị nấm bồ hóng phát triển trên lớp dịch đó."
+  },
+  {
+    "question": "Tại sao máy cắt cỏ tự động có thể hỗ trợ phòng bệnh cho cây?",
+    "ground_truth": "Vì cỏ dại là nơi trú ngụ của sâu bệnh, việc cắt cỏ thường xuyên bằng máy tự động giúp loại bỏ môi trường lây lan và phát triển của mầm bệnh."
+  },
+  {
+    "question": "Làm thế nào để xử lý bệnh đốm vòng trên ớt hiệu quả?",
+    "ground_truth": "Cắt bỏ lá bệnh, tiêu hủy ngoài ruộng, kết hợp phun thuốc đồng sinh học hoặc thuốc có hoạt chất kháng nấm như Mancozeb định kỳ."
+  }
+]

@@ -9,7 +9,8 @@ import logging
 import pandas as pd
 from datasets import Dataset
 import sys
-import math # Thêm import math để tính số lô
+import math
+import json
 
 # --- Haystack Core & Standard Components ---
 from haystack import Pipeline, Document, component
@@ -33,7 +34,7 @@ except ImportError: print("ERROR: haystack-integrations[elasticsearch] not found
 
 # --- Langchain Components (for Ragas wrappers) ---
 try:
-    from langchain_google_genai import ChatGoogleGenerativeAI # Dùng cho AI Studio API Key
+    from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_huggingface import HuggingFaceEmbeddings
 except ImportError: print("ERROR: Langchain google_genai/huggingface not found. pip install langchain-google-genai langchain-huggingface"); sys.exit(1)
 
@@ -76,12 +77,12 @@ MILVUS_URI = get_env_var("MILVUS_HOST", default_value="http://localhost:19530")
 ES_HOST = get_env_var("ES_HOST", default_value="http://127.0.0.1:9200")
 OLLAMA_URL = get_env_var("OLLAMA_URL", default_value="http://localhost:11434")
 OLLAMA_MODEL_NAME = get_env_var("OLLAMA_MODEL", default_value="gemma3:latest")
-GOOGLE_API_KEY = get_env_var("GOOGLE_API_KEY") # Critical for Ragas AI Studio
-GOOGLE_AI_MODEL_NAME_RAGAS = get_env_var("GOOGLE_AI_MODEL_NAME_RAGAS", default_value="gemini-1.5-flash-latest")
+GOOGLE_API_KEY = get_env_var("GOOGLE_API_KEY")
+GOOGLE_AI_MODEL_NAME_RAGAS = get_env_var("GOOGLE_AI_MODEL_NAME_RAGAS", default_value="gemini-2.5-flash-latest")
 
 # --- Other Configurations ---
 HF_TOKEN = Secret.from_token(hf_token) if hf_token else None
-EXPECTED_EMBEDDING_DIM = 384 # Vẫn cần biết dim dự kiến
+EXPECTED_EMBEDDING_DIM = 384
 COLLECTION_NAME = "rag_collection_v2"
 VECTOR_FIELD_NAME = "embedding"
 TEXT_FIELD_NAME_MILVUS = "content"
@@ -96,9 +97,11 @@ EMBEDDER_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-
 OLLAMA_TIMEOUT = 300
 RAGAS_GOOGLE_AI_TIMEOUT = 360.0
 
-# --- Cấu hình cho việc gọi API chậm lại ---
-RAGAS_BATCH_SIZE = 1  # Số lượng mẫu xử lý mỗi lần gọi evaluate (giảm để ít request đồng thời)
-DELAY_BETWEEN_BATCHES = 65 # Giây nghỉ giữa các lô ( > 60s để đảm bảo dưới 15 RPM)
+# <<< THAY ĐỔI: Tăng batch size và loại bỏ cấu hình delay >>>
+# --- Cấu hình cho việc gọi API ---
+# Tăng batch size để xử lý nhanh hơn. Bạn có thể điều chỉnh giá trị này.
+RAGAS_BATCH_SIZE = 10
+# DELAY_BETWEEN_BATCHES = 65 # <<< ĐÃ XÓA
 
 print("-----------------------------")
 
@@ -121,19 +124,17 @@ print("-----------------------------")
 print("--- Initializing Haystack Components ---")
 try:
     # Document Stores
-    # *** BỎ embedding_dim THEO YÊU CẦU - CÓ THỂ GÂY LỖI NẾU COLLECTION CHƯA TỒN TẠI/SAI SCHEMA ***
     print("WARNING: Initializing MilvusDocumentStore without explicitly setting embedding_dim. This might fail if the collection doesn't exist or has an incorrect schema.")
     milvus_store = MilvusDocumentStore(
         connection_args={"uri": MILVUS_URI},
         collection_name=COLLECTION_NAME,
         vector_field=VECTOR_FIELD_NAME,
         text_field=TEXT_FIELD_NAME_MILVUS,
-        # embedding_dim=EXPECTED_EMBEDDING_DIM, # Bỏ dòng này
         index_params=MILVUS_INDEX_PARAMS,
         search_params=MILVUS_SEARCH_PARAMS
     )
     es_store = ElasticsearchDocumentStore(hosts=[ES_HOST], index=ES_INDEX_NAME)
-    print(f"Milvus connection check successful. | ES: {es_store.count_documents()} docs.") # Không in count Milvus nếu chưa chắc có collection
+    print(f"Milvus connection check successful. | ES: {es_store.count_documents()} docs.")
 
     # Embedder
     text_embedder = SentenceTransformersTextEmbedder(model=EMBEDDER_MODEL_NAME, device=device, token=HF_TOKEN, normalize_embeddings=True)
@@ -203,30 +204,30 @@ try:
     ),
     ChatMessage.from_user(
          """**Chat History:**
-{% for msg in memories %}
-{% if msg.role == 'user' %}User: {{ (msg.to_dict()).content[0].text }}{% elif msg.role == 'assistant' %}Assistant: {{ (msg.to_dict()).content[0].text }}{% endif %}
-{% else %}
-(No chat history)
-{% endfor %}
+        {% for msg in memories %}
+        {% if msg.role == 'user' %}User: {{ (msg.to_dict()).content[0].text }}{% elif msg.role == 'assistant' %}Assistant: {{ (msg.to_dict()).content[0].text }}{% endif %}
+        {% else %}
+        (No chat history)
+        {% endfor %}
 
-{% if identified_disease %}
-**Image Analysis Result:** {{ identified_disease }}
-{% endif %}
+        {% if identified_disease %}
+        **Image Analysis Result:** {{ identified_disease }}
+        {% endif %}
 
-**Reference Documents:**
-{% if documents %}
-    {% for doc in documents %}
-    ---
-    {{ doc.content }}
-    ---
-    {% endfor %}
-{% else %}
-    (No reference documents)
-{% endif %}
+        **Reference Documents:**
+        {% if documents %}
+            {% for doc in documents %}
+            ---
+            {{ doc.content }}
+            ---
+            {% endfor %}
+        {% else %}
+            (No reference documents)
+        {% endif %}
 
-**User's Current Question:** {{ query }}
+        **User's Current Question:** {{ query }}
 
-**Answer (Strictly follow ALL rules and critical reminders, RESPOND ONLY IN VIETNAMESE):**"""
+        **Answer (Strictly follow ALL rules and critical reminders, RESPOND ONLY IN VIETNAMESE):**"""
     )]
     eval_chat_prompt_builder = ChatPromptBuilder(template=eval_chat_prompt_template)
     logging.getLogger("haystack.core.pipeline.pipeline").setLevel(logging.WARNING)
@@ -255,7 +256,6 @@ try:
         model=GOOGLE_AI_MODEL_NAME_RAGAS,
         temperature=0.1,
         request_timeout=RAGAS_GOOGLE_AI_TIMEOUT,
-        # google_api_key=GOOGLE_API_KEY # Langchain tự đọc từ env var
     )
     ragas_metric_llm = LangchainLLMWrapper(langchain_llm=langchain_google_ai_for_ragas)
     print(f"Ragas LLM Wrapper (Google AI Studio: {GOOGLE_AI_MODEL_NAME_RAGAS}) initialized.")
@@ -285,7 +285,7 @@ eval_pipeline.add_component("joiner", joiner)
 eval_pipeline.add_component("ranker", ranker)
 eval_pipeline.add_component("eval_chat_prompt_builder", eval_chat_prompt_builder)
 eval_pipeline.add_component("message_to_string_adapter", message_to_string_adapter)
-eval_pipeline.add_component("llm", ollama_llm_generator) # Ollama generates the answer
+eval_pipeline.add_component("llm", ollama_llm_generator)
 
 eval_pipeline.connect("text_embedder.embedding", "milvus_retriever.query_embedding")
 eval_pipeline.connect("milvus_retriever.documents", "joiner.documents")
@@ -298,27 +298,31 @@ print("Evaluation pipeline built successfully.")
 print("-----------------------------")
 
 # --- Evaluation Dataset ---
-# !!! USER ACTION REQUIRED: Define your evaluation data here !!!
-evaluation_dataset_for_ragas = [
-    {
-        "question": "Triệu chứng của bệnh đốm lá Cercospora trên củ cải đường là gì?",
-        "ground_truth": "Bệnh đốm lá Cercospora trên củ cải đường gây ra các đốm tròn, đường kính khoảng 3mm (hoặc 1/8 inch), có tâm màu xám tro và viền màu nâu sẫm hoặc đỏ tía. Khi bệnh nặng, lá có thể rụng, làm giảm năng suất và chất lượng củ cải."
-    },
-    {
-        "question": "Làm thế nào để quản lý bệnh đốm lá Cercospora bằng biện pháp canh tác?",
-        "ground_truth": "Các biện pháp canh tác bao gồm thăm dò đồng ruộng thường xuyên để phát hiện sớm, cày xới vụ thu để vùi lấp tàn dư cây bệnh, luân canh cây trồng (nghỉ củ cải đường ít nhất 2 năm), trồng xa các khu vực đã nhiễm bệnh trước đó (ít nhất 100 thước Anh), và sử dụng giống kháng bệnh (ví dụ: giống CR+)."
-    },
-    {
-        "question": "Điều kiện môi trường nào thuận lợi cho bệnh đốm lá Cercospora phát triển?",
-        "ground_truth": "Bệnh phát triển mạnh trong điều kiện thời tiết ấm, ẩm ướt. Cụ thể là nhiệt độ ban ngày từ 80-90°F (27-32°C), nhiệt độ ban đêm trên 60°F (15.5°C), và độ ẩm không khí cao (90-100%). Bệnh thường phổ biến sau khi tán cây khép lại."
-    }
-    # --- ADD MORE QUESTIONS AND GROUND TRUTHS HERE ---
-]
-print(f"--- Loaded {len(evaluation_dataset_for_ragas)} evaluation samples ---")
+print("--- Loading Evaluation Dataset from gr.json ---")
+try:
+    with open('./ground_truth/gr.json', 'r', encoding='utf-8') as f:
+        evaluation_dataset_for_ragas = json.load(f)
+    
+    if not isinstance(evaluation_dataset_for_ragas, list) or not all(isinstance(i, dict) for i in evaluation_dataset_for_ragas):
+        print("CRITICAL ERROR: 'gr.json' must contain a valid JSON array of objects.")
+        sys.exit(1)
+
+except FileNotFoundError:
+    print("CRITICAL ERROR: 'gr.json' not found. Make sure it is in the same directory as the script.")
+    sys.exit(1)
+except json.JSONDecodeError:
+    print("CRITICAL ERROR: 'gr.json' contains invalid JSON. Please check the file format.")
+    sys.exit(1)
+except Exception as e:
+    print(f"CRITICAL ERROR: An unexpected error occurred while loading gr.json: {e}")
+    sys.exit(1)
+
+print(f"--- Loaded {len(evaluation_dataset_for_ragas)} evaluation samples from gr.json ---")
 if not evaluation_dataset_for_ragas:
-    print("ERROR: Evaluation dataset is empty. Please add question/ground_truth pairs.")
+    print("ERROR: Evaluation dataset is empty. Please add question/ground_truth pairs to gr.json.")
     sys.exit(1)
 print("-----------------------------")
+
 
 # --- Run Pipeline & Collect Data ---
 print("--- Running Pipeline to Collect Data for Ragas (Using Ollama Generator) ---")
@@ -326,7 +330,7 @@ ragas_data_samples = []
 start_collection_time = time.time()
 
 if not evaluation_dataset_for_ragas:
-    print("ERROR: `evaluation_dataset_for_ragas` is empty.") # Lỗi đã được xử lý ở trên
+    print("ERROR: `evaluation_dataset_for_ragas` is empty.")
 else:
     for i, item in enumerate(evaluation_dataset_for_ragas):
         question = item["question"]
@@ -360,10 +364,11 @@ end_collection_time = time.time()
 print(f"\n--- Data Collection Finished in {end_collection_time - start_collection_time:.2f} seconds ---")
 print("-----------------------------")
 
-# --- Ragas Evaluation with Batching and Delay ---
+# <<< THAY ĐỔI: Loại bỏ hoàn toàn logic delay >>>
+# --- Ragas Evaluation with Batching ---
 if ragas_data_samples and ragas_metric_llm and ragas_embeddings:
-    print(f"--- Starting Ragas Evaluation (using Google AI Studio for metrics) with Batch Size: {RAGAS_BATCH_SIZE}, Delay: {DELAY_BETWEEN_BATCHES}s ---")
-    all_results_dfs = [] # List để lưu DataFrame kết quả của từng lô
+    print(f"--- Starting Ragas Evaluation (using Google AI Studio for metrics) with Batch Size: {RAGAS_BATCH_SIZE} ---")
+    all_results_dfs = []
     num_samples = len(ragas_data_samples)
     num_batches = math.ceil(num_samples / RAGAS_BATCH_SIZE)
     evaluation_start_time = time.time()
@@ -384,35 +389,27 @@ if ragas_data_samples and ragas_metric_llm and ragas_embeddings:
                 metrics=metrics_to_evaluate,
                 llm=ragas_metric_llm,
                 embeddings=ragas_embeddings,
-                raise_exceptions=False # Rất quan trọng khi chạy theo lô
+                raise_exceptions=False
             )
             batch_end_eval_time = time.time()
             print(f"  Batch {i+1} evaluation finished in {batch_end_eval_time - batch_start_eval_time:.2f} seconds.")
 
-            # Lưu kết quả của lô này
-            if results: # Kiểm tra xem evaluate có trả về kết quả không
-                 results_df_batch = results.to_pandas()
-                 all_results_dfs.append(results_df_batch)
+            if results:
+                results_df_batch = results.to_pandas()
+                all_results_dfs.append(results_df_batch)
             else:
-                 print(f"  WARNING: No results returned from evaluate for batch {i+1}.")
+                print(f"  WARNING: No results returned from evaluate for batch {i+1}.")
 
-
-            # Nghỉ giữa các lô (trừ lô cuối cùng)
-            if i < num_batches - 1:
-                print(f"  Waiting for {DELAY_BETWEEN_BATCHES} seconds before next batch to avoid rate limits...")
-                time.sleep(DELAY_BETWEEN_BATCHES)
-
+            # <<< ĐÃ XÓA: Toàn bộ khối if-else và time.sleep()
+            
         except Exception as e:
             print(f"\n  ERROR during Ragas evaluation for Batch {i+1}: {e}")
             traceback.print_exc()
             print(f"  Skipping batch {i+1} due to error.")
-            # Có thể thêm placeholder lỗi vào all_results_dfs nếu muốn
-            if i < num_batches - 1: # Vẫn nghỉ nếu lỗi không phải lô cuối
-                 print(f"  Waiting for {DELAY_BETWEEN_BATCHES} seconds despite error...")
-                 time.sleep(DELAY_BETWEEN_BATCHES)
+            # <<< ĐÃ XÓA: Toàn bộ khối if-else và time.sleep()
 
     evaluation_end_time = time.time()
-    print(f"\n--- Total Ragas Evaluation (with delays) Finished in {evaluation_end_time - evaluation_start_time:.2f} seconds ---")
+    print(f"\n--- Total Ragas Evaluation Finished in {evaluation_end_time - evaluation_start_time:.2f} seconds ---")
     print("-----------------------------")
 
     # --- Kết hợp và Hiển thị Kết quả ---
@@ -432,10 +429,6 @@ if ragas_data_samples and ragas_metric_llm and ragas_embeddings:
             print("No numeric metric columns found.")
         print("-----------------------------")
 
-        # Optional: Save final results
-        # filename = f"evaluation_results_batched_{time.strftime('%Y%m%d_%H%M%S')}.csv"
-        # final_results_df.to_csv(filename, index=False, encoding='utf-8-sig')
-        # print(f"Final results saved to {filename}")
     else:
         print("ERROR: No results were collected from any evaluation batch.")
 

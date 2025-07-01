@@ -9,14 +9,14 @@ import logging
 import pandas as pd
 from datasets import Dataset
 import sys
-import math # Thêm import math để tính số lô
+import math
+import json
 
 # --- Haystack Core & Standard Components ---
 from haystack import Pipeline, Document, component
 from haystack.components.builders import ChatPromptBuilder
 from haystack.utils import Secret, ComponentDevice
 from haystack.components.embedders import SentenceTransformersTextEmbedder
-from haystack.components.joiners import DocumentJoiner
 from haystack.components.rankers import TransformersSimilarityRanker
 from haystack.dataclasses import ChatMessage
 from haystack.components.converters import OutputAdapter
@@ -26,14 +26,10 @@ from haystack_integrations.components.generators.ollama import OllamaGenerator
 try:
     from milvus_haystack import MilvusDocumentStore, MilvusEmbeddingRetriever
 except ImportError: print("ERROR: milvus_haystack not found. pip install milvus-haystack"); sys.exit(1)
-try:
-    from haystack_integrations.document_stores.elasticsearch import ElasticsearchDocumentStore
-    from haystack_integrations.components.retrievers.elasticsearch import ElasticsearchBM25Retriever
-except ImportError: print("ERROR: haystack-integrations[elasticsearch] not found. pip install 'haystack-integrations[elasticsearch]'"); sys.exit(1)
 
 # --- Langchain Components (for Ragas wrappers) ---
 try:
-    from langchain_google_genai import ChatGoogleGenerativeAI # Dùng cho AI Studio API Key
+    from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_huggingface import HuggingFaceEmbeddings
 except ImportError: print("ERROR: Langchain google_genai/huggingface not found. pip install langchain-google-genai langchain-huggingface"); sys.exit(1)
 
@@ -73,32 +69,25 @@ def get_env_var(var_name: str, is_critical: bool = True, default_value: Optional
 print("Checking environment variables...")
 hf_token = get_env_var("HF_TOKEN", is_critical=False)
 MILVUS_URI = get_env_var("MILVUS_HOST", default_value="http://localhost:19530")
-ES_HOST = get_env_var("ES_HOST", default_value="http://127.0.0.1:9200")
 OLLAMA_URL = get_env_var("OLLAMA_URL", default_value="http://localhost:11434")
 OLLAMA_MODEL_NAME = get_env_var("OLLAMA_MODEL", default_value="gemma3:latest")
-GOOGLE_API_KEY = get_env_var("GOOGLE_API_KEY") # Critical for Ragas AI Studio
-GOOGLE_AI_MODEL_NAME_RAGAS = get_env_var("GOOGLE_AI_MODEL_NAME_RAGAS", default_value="gemini-1.5-flash-latest")
+GOOGLE_API_KEY = get_env_var("GOOGLE_API_KEY")
+GOOGLE_AI_MODEL_NAME_RAGAS = get_env_var("GOOGLE_AI_MODEL_NAME_RAGAS", default_value="gemini-2.5-flash-latest")
 
 # --- Other Configurations ---
 HF_TOKEN = Secret.from_token(hf_token) if hf_token else None
-EXPECTED_EMBEDDING_DIM = 384 # Vẫn cần biết dim dự kiến
 COLLECTION_NAME = "rag_collection_v2"
 VECTOR_FIELD_NAME = "embedding"
 TEXT_FIELD_NAME_MILVUS = "content"
 MILVUS_INDEX_PARAMS = {"index_type": "DISKANN", "metric_type": "COSINE", "params": {"search_list": 100}}
 MILVUS_SEARCH_PARAMS = {"metric_type": "COSINE", "params": {"search_list": 100}}
 MILVUS_TOP_K = 7
-ES_INDEX_NAME = "my_rag_index_final"
-ES_BM25_TOP_K = 7
 RANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-12-v2"
 RANKER_FINAL_TOP_K = 5
 EMBEDDER_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 OLLAMA_TIMEOUT = 300
 RAGAS_GOOGLE_AI_TIMEOUT = 360.0
-
-# --- Cấu hình cho việc gọi API chậm lại ---
-RAGAS_BATCH_SIZE = 1  # Số lượng mẫu xử lý mỗi lần gọi evaluate (giảm để ít request đồng thời)
-DELAY_BETWEEN_BATCHES = 65 # Giây nghỉ giữa các lô ( > 60s để đảm bảo dưới 15 RPM)
+RAGAS_BATCH_SIZE = 10
 
 print("-----------------------------")
 
@@ -121,41 +110,35 @@ print("-----------------------------")
 print("--- Initializing Haystack Components ---")
 try:
     # Document Stores
-    # *** BỎ embedding_dim THEO YÊU CẦU - CÓ THỂ GÂY LỖI NẾU COLLECTION CHƯA TỒN TẠI/SAI SCHEMA ***
-    print("WARNING: Initializing MilvusDocumentStore without explicitly setting embedding_dim. This might fail if the collection doesn't exist or has an incorrect schema.")
     milvus_store = MilvusDocumentStore(
         connection_args={"uri": MILVUS_URI},
         collection_name=COLLECTION_NAME,
         vector_field=VECTOR_FIELD_NAME,
         text_field=TEXT_FIELD_NAME_MILVUS,
-        # embedding_dim=EXPECTED_EMBEDDING_DIM, # Bỏ dòng này
         index_params=MILVUS_INDEX_PARAMS,
         search_params=MILVUS_SEARCH_PARAMS
     )
-    es_store = ElasticsearchDocumentStore(hosts=[ES_HOST], index=ES_INDEX_NAME)
-    print(f"Milvus connection check successful. | ES: {es_store.count_documents()} docs.") # Không in count Milvus nếu chưa chắc có collection
+    print(f"Milvus connection check successful.")
 
     # Embedder
     text_embedder = SentenceTransformersTextEmbedder(model=EMBEDDER_MODEL_NAME, device=device, token=HF_TOKEN, normalize_embeddings=True)
     text_embedder.warm_up()
 
-    # Retrievers
+    # Retriever (Only Milvus)
     milvus_retriever = MilvusEmbeddingRetriever(document_store=milvus_store, top_k=MILVUS_TOP_K)
-    bm25_retriever = ElasticsearchBM25Retriever(document_store=es_store, top_k=ES_BM25_TOP_K)
 
-    # Joiner & Ranker
-    joiner = DocumentJoiner(join_mode="concatenate")
+    # Ranker
     ranker = TransformersSimilarityRanker(model=RANKER_MODEL_NAME, top_k=RANKER_FINAL_TOP_K, token=HF_TOKEN, device=device)
     ranker.warm_up()
 
-    # Simple Prompt Builder for Evaluation
+    # Prompt Builder
     eval_chat_prompt_template = [ChatMessage.from_system(
         "You are a Vietnamese agricultural AI assistant. Your mission is to provide accurate and helpful agricultural information to Vietnamese users. STRICTLY ADHERE to the following rules IN THE CORRECT ORDER:"
         "\n"
         "**RULE 1: PRIORITIZE HANDLING 'HEALTHY' IMAGE RESULTS**"
         "\n"
-        "*   **DECISIVE CONDITION:** The `**Image Analysis Result:**` line exists AND it contains ONE OF THE FOLLOWING KEYWORDS: 'khỏe mạnh', 'healthy', 'không có bệnh', 'bình thường'."
-        "*   **MANDATORY AND SOLE ACTION (If DECISIVE CONDITION is TRUE):**"
+        "* **DECISIVE CONDITION:** The `**Image Analysis Result:**` line exists AND it contains ONE OF THE FOLLOWING KEYWORDS: 'khỏe mạnh', 'healthy', 'không có bệnh', 'bình thường'."
+        "* **MANDATORY AND SOLE ACTION (If DECISIVE CONDITION is TRUE):**"
         "    1.  **COMPLETELY IGNORE EVERYTHING ELSE:** Do NOT read, consider, or use `{{ query }}`, `{{ memories }}`, and **POSITIVELY DO NOT LOOK AT or USE any content from `{{ documents }}`**. They are irrelevant and FORBIDDEN in this case."
         "    2.  Reply with EXACTLY and ONLY the following sentence in VIETNAMESE: 'Kết quả phân tích hình ảnh cho thấy cây trồng này khỏe mạnh, không có dấu hiệu bệnh rõ ràng.'"
         "    3.  **STOP IMMEDIATELY.** Do not execute any other Rules."
@@ -164,20 +147,20 @@ try:
         "\n"
         "**RULE 2: HANDLE OTHER (NON-'HEALTHY') IMAGE RESULTS**"
         "\n"
-        "*   **CONDITION:** The `**Image Analysis Result:**` line exists AND it does NOT contain any keywords listed in Rule 1."
-        "*   **ACTION:**"
-        "    *   Identify the disease/issue from `**Image Analysis Result:**` (This is the **Current Context**)."
-        "    *   Answer `{{ query }}` focusing on this **Current Context**."
-        "    *   **ONLY** use `{{ documents }}` if they are directly relevant to the **Current Context**. Ignore all irrelevant documents."
-        "    *   Avoid video links."
-        "    *   Stop."
+        "* **CONDITION:** The `**Image Analysis Result:**` line exists AND it does NOT contain any keywords listed in Rule 1."
+        "* **ACTION:**"
+        "    * Identify the disease/issue from `**Image Analysis Result:**` (This is the **Current Context**)."
+        "    * Answer `{{ query }}` focusing on this **Current Context**."
+        "    * **ONLY** use `{{ documents }}` if they are directly relevant to the **Current Context**. Ignore all irrelevant documents."
+        "    * Avoid video links."
+        "    * Stop."
         "\n"
         "--- Only execute the rules below IF RULE 1 AND RULE 2 DID NOT APPLY ---"
         "\n"
         "**RULE 3: CHECK FOR OFF-TOPIC QUERIES (NO IMAGE)**"
         "\n"
-        "*   **CONDITION:** No `**Image Analysis Result:**` exists AND `{{ query }}` is clearly NOT related to agriculture, plants, pests, diseases, fertilizers, or farming techniques (e.g., asking about politics, history, unrelated cooking, celebrities, world news, etc.)."
-        "*   **MANDATORY ACTION:**"
+        "* **CONDITION:** No `**Image Analysis Result:**` exists AND `{{ query }}` is clearly NOT related to agriculture, plants, pests, diseases, fertilizers, or farming techniques (e.g., asking about politics, history, unrelated cooking, celebrities, world news, etc.)."
+        "* **MANDATORY ACTION:**"
         "    1.  **ABSOLUTELY DO NOT USE `{{ documents }}`.**"
         "    2.  Politely reply in VIETNAMESE that you are an agricultural assistant and cannot answer off-topic questions. Example: 'Tôi là trợ lý AI chuyên về nông nghiệp Việt Nam. Rất tiếc, tôi không thể trả lời câu hỏi của bạn về chủ đề này. Bạn có câu hỏi nào khác liên quan đến trồng trọt, sâu bệnh hoặc kỹ thuật nông nghiệp không?'"
         "    3.  **STOP IMMEDIATELY.** Do not execute Rule 4."
@@ -186,12 +169,12 @@ try:
         "\n"
         "**RULE 4: ANSWER NORMAL AGRICULTURAL QUERIES (NO IMAGE, ON-TOPIC)**"
         "\n"
-        "*   **CONDITION:** No `**Image Analysis Result:**` exists AND `{{ query }}` is related to agriculture."
-        "*   **ACTION:**"
-        "    *   Check `{{ memories }}` for a recently discussed **Context** (disease/topic)."
-        "    *   Answer `{{ query }}`: prioritize the **Context** (if available), otherwise answer generally."
-        "    *   Use `{{ documents }}` to find information relevant to the **Context** (if available) or directly relevant to `{{ query }}`."
-        "    *   Avoid video links."
+        "* **CONDITION:** No `**Image Analysis Result:**` exists AND `{{ query }}` is related to agriculture."
+        "* **ACTION:**"
+        "    * Check `{{ memories }}` for a recently discussed **Context** (disease/topic)."
+        "    * Answer `{{ query }}`: prioritize the **Context** (if available), otherwise answer generally."
+        "    * Use `{{ documents }}` to find information relevant to the **Context** (if available) or directly relevant to `{{ query }}`."
+        "    * Avoid video links."
         "\n"
         "**MOST CRITICAL REMINDERS:**"
         "\n"
@@ -234,8 +217,9 @@ try:
     # Adapter
     message_to_string_adapter = OutputAdapter(template="{{ (messages[-1].to_dict())['content'][0]['text'] }}", output_type=str)
 
-    # Ollama Generator (for Haystack Pipeline)
+    # LLM Generator
     ollama_llm_generator = OllamaGenerator(model=OLLAMA_MODEL_NAME, url=OLLAMA_URL, timeout=OLLAMA_TIMEOUT, generation_kwargs={"temperature": 0.1})
+
     print("Haystack components initialized.")
 except Exception as e:
     print(f"\nFATAL ERROR initializing Haystack components: {e}")
@@ -249,18 +233,14 @@ print("--- Initializing Ragas Wrappers (Google AI Studio for LLM, HF for Embeddi
 ragas_metric_llm = None
 ragas_embeddings = None
 try:
-    # Google AI Studio LLM for Ragas
-    print(f"Attempting to initialize ChatGoogleGenerativeAI with model='{GOOGLE_AI_MODEL_NAME_RAGAS}'")
     langchain_google_ai_for_ragas = ChatGoogleGenerativeAI(
         model=GOOGLE_AI_MODEL_NAME_RAGAS,
         temperature=0.1,
         request_timeout=RAGAS_GOOGLE_AI_TIMEOUT,
-        # google_api_key=GOOGLE_API_KEY # Langchain tự đọc từ env var
     )
     ragas_metric_llm = LangchainLLMWrapper(langchain_llm=langchain_google_ai_for_ragas)
     print(f"Ragas LLM Wrapper (Google AI Studio: {GOOGLE_AI_MODEL_NAME_RAGAS}) initialized.")
 
-    # HF Embeddings for Ragas
     langchain_embeddings_model = HuggingFaceEmbeddings(
         model_name=EMBEDDER_MODEL_NAME,
         model_kwargs={'device': device.to_torch_str()},
@@ -275,22 +255,18 @@ except Exception as e:
 print("-----------------------------")
 
 
-# --- Build Haystack Evaluation Pipeline ---
-print("--- Building Haystack Evaluation Pipeline (using Ollama Generator) ---")
+# --- Build Haystack Evaluation Pipeline (Milvus Only) ---
+print("--- Building Haystack Evaluation Pipeline (Milvus Only) ---")
 eval_pipeline = Pipeline()
 eval_pipeline.add_component("text_embedder", text_embedder)
 eval_pipeline.add_component("milvus_retriever", milvus_retriever)
-eval_pipeline.add_component("bm25_retriever", bm25_retriever)
-eval_pipeline.add_component("joiner", joiner)
 eval_pipeline.add_component("ranker", ranker)
 eval_pipeline.add_component("eval_chat_prompt_builder", eval_chat_prompt_builder)
 eval_pipeline.add_component("message_to_string_adapter", message_to_string_adapter)
-eval_pipeline.add_component("llm", ollama_llm_generator) # Ollama generates the answer
+eval_pipeline.add_component("llm", ollama_llm_generator)
 
 eval_pipeline.connect("text_embedder.embedding", "milvus_retriever.query_embedding")
-eval_pipeline.connect("milvus_retriever.documents", "joiner.documents")
-eval_pipeline.connect("bm25_retriever.documents", "joiner.documents")
-eval_pipeline.connect("joiner.documents", "ranker.documents")
+eval_pipeline.connect("milvus_retriever.documents", "ranker.documents")
 eval_pipeline.connect("ranker.documents", "eval_chat_prompt_builder.documents")
 eval_pipeline.connect("eval_chat_prompt_builder.prompt", "message_to_string_adapter.messages")
 eval_pipeline.connect("message_to_string_adapter.output", "llm.prompt")
@@ -298,27 +274,31 @@ print("Evaluation pipeline built successfully.")
 print("-----------------------------")
 
 # --- Evaluation Dataset ---
-# !!! USER ACTION REQUIRED: Define your evaluation data here !!!
-evaluation_dataset_for_ragas = [
-    {
-        "question": "Triệu chứng của bệnh đốm lá Cercospora trên củ cải đường là gì?",
-        "ground_truth": "Bệnh đốm lá Cercospora trên củ cải đường gây ra các đốm tròn, đường kính khoảng 3mm (hoặc 1/8 inch), có tâm màu xám tro và viền màu nâu sẫm hoặc đỏ tía. Khi bệnh nặng, lá có thể rụng, làm giảm năng suất và chất lượng củ cải."
-    },
-    {
-        "question": "Làm thế nào để quản lý bệnh đốm lá Cercospora bằng biện pháp canh tác?",
-        "ground_truth": "Các biện pháp canh tác bao gồm thăm dò đồng ruộng thường xuyên để phát hiện sớm, cày xới vụ thu để vùi lấp tàn dư cây bệnh, luân canh cây trồng (nghỉ củ cải đường ít nhất 2 năm), trồng xa các khu vực đã nhiễm bệnh trước đó (ít nhất 100 thước Anh), và sử dụng giống kháng bệnh (ví dụ: giống CR+)."
-    },
-    {
-        "question": "Điều kiện môi trường nào thuận lợi cho bệnh đốm lá Cercospora phát triển?",
-        "ground_truth": "Bệnh phát triển mạnh trong điều kiện thời tiết ấm, ẩm ướt. Cụ thể là nhiệt độ ban ngày từ 80-90°F (27-32°C), nhiệt độ ban đêm trên 60°F (15.5°C), và độ ẩm không khí cao (90-100%). Bệnh thường phổ biến sau khi tán cây khép lại."
-    }
-    # --- ADD MORE QUESTIONS AND GROUND TRUTHS HERE ---
-]
-print(f"--- Loaded {len(evaluation_dataset_for_ragas)} evaluation samples ---")
+print("--- Loading Evaluation Dataset from gr.json ---")
+try:
+    with open('./ground_truth/gr.json', 'r', encoding='utf-8') as f:
+        evaluation_dataset_for_ragas = json.load(f)
+
+    if not isinstance(evaluation_dataset_for_ragas, list) or not all(isinstance(i, dict) for i in evaluation_dataset_for_ragas):
+        print("CRITICAL ERROR: 'gr.json' must contain a valid JSON array of objects.")
+        sys.exit(1)
+
+except FileNotFoundError:
+    print("CRITICAL ERROR: './ground_truth/gr.json' not found. Make sure the path is correct.")
+    sys.exit(1)
+except json.JSONDecodeError:
+    print("CRITICAL ERROR: 'gr.json' contains invalid JSON. Please check the file format.")
+    sys.exit(1)
+except Exception as e:
+    print(f"CRITICAL ERROR: An unexpected error occurred while loading gr.json: {e}")
+    sys.exit(1)
+
+print(f"--- Loaded {len(evaluation_dataset_for_ragas)} evaluation samples from gr.json ---")
 if not evaluation_dataset_for_ragas:
-    print("ERROR: Evaluation dataset is empty. Please add question/ground_truth pairs.")
+    print("ERROR: Evaluation dataset is empty. Please add question/ground_truth pairs to gr.json.")
     sys.exit(1)
 print("-----------------------------")
+
 
 # --- Run Pipeline & Collect Data ---
 print("--- Running Pipeline to Collect Data for Ragas (Using Ollama Generator) ---")
@@ -326,14 +306,14 @@ ragas_data_samples = []
 start_collection_time = time.time()
 
 if not evaluation_dataset_for_ragas:
-    print("ERROR: `evaluation_dataset_for_ragas` is empty.") # Lỗi đã được xử lý ở trên
+    print("ERROR: `evaluation_dataset_for_ragas` is empty.")
 else:
     for i, item in enumerate(evaluation_dataset_for_ragas):
         question = item["question"]
         print(f"\nProcessing {i+1}/{len(evaluation_dataset_for_ragas)}: {question}")
+
         pipeline_input = {
             "text_embedder": {"text": question},
-            "bm25_retriever": {"query": question},
             "ranker": {"query": question},
             "eval_chat_prompt_builder": {"query": question},
         }
@@ -352,6 +332,7 @@ else:
             print(f"  Collected contexts: {len(contexts)}, Answer generated (by Ollama).")
         except Exception as e:
             print(f"  ERROR processing question '{question}': {e}")
+            traceback.print_exc()
             ragas_data_samples.append({
                 "question": question, "contexts": [], "answer": f"Pipeline Error: {e}", "ground_truth": item["ground_truth"]
             })
@@ -360,10 +341,10 @@ end_collection_time = time.time()
 print(f"\n--- Data Collection Finished in {end_collection_time - start_collection_time:.2f} seconds ---")
 print("-----------------------------")
 
-# --- Ragas Evaluation with Batching and Delay ---
+# --- Ragas Evaluation with Batching ---
 if ragas_data_samples and ragas_metric_llm and ragas_embeddings:
-    print(f"--- Starting Ragas Evaluation (using Google AI Studio for metrics) with Batch Size: {RAGAS_BATCH_SIZE}, Delay: {DELAY_BETWEEN_BATCHES}s ---")
-    all_results_dfs = [] # List để lưu DataFrame kết quả của từng lô
+    print(f"--- Starting Ragas Evaluation (using Google AI Studio for metrics) with Batch Size: {RAGAS_BATCH_SIZE} ---")
+    all_results_dfs = []
     num_samples = len(ragas_data_samples)
     num_batches = math.ceil(num_samples / RAGAS_BATCH_SIZE)
     evaluation_start_time = time.time()
@@ -384,38 +365,27 @@ if ragas_data_samples and ragas_metric_llm and ragas_embeddings:
                 metrics=metrics_to_evaluate,
                 llm=ragas_metric_llm,
                 embeddings=ragas_embeddings,
-                raise_exceptions=False # Rất quan trọng khi chạy theo lô
+                raise_exceptions=False
             )
             batch_end_eval_time = time.time()
             print(f"  Batch {i+1} evaluation finished in {batch_end_eval_time - batch_start_eval_time:.2f} seconds.")
 
-            # Lưu kết quả của lô này
-            if results: # Kiểm tra xem evaluate có trả về kết quả không
-                 results_df_batch = results.to_pandas()
-                 all_results_dfs.append(results_df_batch)
+            if results:
+                results_df_batch = results.to_pandas()
+                all_results_dfs.append(results_df_batch)
             else:
-                 print(f"  WARNING: No results returned from evaluate for batch {i+1}.")
-
-
-            # Nghỉ giữa các lô (trừ lô cuối cùng)
-            if i < num_batches - 1:
-                print(f"  Waiting for {DELAY_BETWEEN_BATCHES} seconds before next batch to avoid rate limits...")
-                time.sleep(DELAY_BETWEEN_BATCHES)
+                print(f"  WARNING: No results returned from evaluate for batch {i+1}.")
 
         except Exception as e:
             print(f"\n  ERROR during Ragas evaluation for Batch {i+1}: {e}")
             traceback.print_exc()
             print(f"  Skipping batch {i+1} due to error.")
-            # Có thể thêm placeholder lỗi vào all_results_dfs nếu muốn
-            if i < num_batches - 1: # Vẫn nghỉ nếu lỗi không phải lô cuối
-                 print(f"  Waiting for {DELAY_BETWEEN_BATCHES} seconds despite error...")
-                 time.sleep(DELAY_BETWEEN_BATCHES)
 
     evaluation_end_time = time.time()
-    print(f"\n--- Total Ragas Evaluation (with delays) Finished in {evaluation_end_time - evaluation_start_time:.2f} seconds ---")
+    print(f"\n--- Total Ragas Evaluation Finished in {evaluation_end_time - evaluation_start_time:.2f} seconds ---")
     print("-----------------------------")
 
-    # --- Kết hợp và Hiển thị Kết quả ---
+    # --- Combine and Display Results ---
     if all_results_dfs:
         final_results_df = pd.concat(all_results_dfs, ignore_index=True)
         print("\n--- Final Ragas Evaluation Results (Combined Batches) ---")
@@ -433,9 +403,10 @@ if ragas_data_samples and ragas_metric_llm and ragas_embeddings:
         print("-----------------------------")
 
         # Optional: Save final results
-        # filename = f"evaluation_results_batched_{time.strftime('%Y%m%d_%H%M%S')}.csv"
+        # filename = f"evaluation_results_milvus_only_{time.strftime('%Y%m%d_%H%M%S')}.csv"
         # final_results_df.to_csv(filename, index=False, encoding='utf-8-sig')
         # print(f"Final results saved to {filename}")
+
     else:
         print("ERROR: No results were collected from any evaluation batch.")
 
