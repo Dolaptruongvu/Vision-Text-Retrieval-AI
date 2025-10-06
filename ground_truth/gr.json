@@ -413,5 +413,205 @@
   {
     "question": "Làm thế nào để xử lý bệnh đốm vòng trên ớt hiệu quả?",
     "ground_truth": "Cắt bỏ lá bệnh, tiêu hủy ngoài ruộng, kết hợp phun thuốc đồng sinh học hoặc thuốc có hoạt chất kháng nấm như Mancozeb định kỳ."
+  },
+  {
+    "question": "Bệnh đốm rong trên cây sầu riêng do tác nhân nào gây ra?",
+    "ground_truth": "Bệnh đốm rong do tảo Cephaleuros virescens tấn công, chúng ký sinh trên nhiều loại cây khác nhau."
+  },
+  {
+    "question": "Triệu chứng của bệnh đốm rong trên lá sầu riêng là gì?",
+    "ground_truth": "Trên bề mặt lá xuất hiện những đốm trơn màu nâu đỏ, hơi nhô lên, làm lá bị thô cứng, ảnh hưởng đến quá trình quang hợp."
+  },
+  {
+    "question": "Bệnh đốm rong trên sầu riêng gây ra hậu quả gì?",
+    "ground_truth": "Bệnh làm giảm khả năng quang hợp của cây, tạo ra các vết thương trên thân, cành. Bệnh nặng có thể làm khô cành, rụng lá, ảnh hưởng rất nhiều đến sự sinh trưởng của cây."
+  },
+  {
+    "question": "Biện pháp canh tác để phòng ngừa bệnh đốm rong trên sầu riêng là gì?",
+    "ground_truth": "Không trồng mật độ quá dày, cải tạo đất tơi xốp, bón phân cân đối, tưới nước đầy đủ, bón vôi định kỳ, và phun thuốc phòng bệnh vào đầu và cuối mùa mưa."
+  },
+  {
+    "question": "Nguyên nhân chính gây bệnh cháy lá chết ngọn trên cây sầu riêng là gì?",
+    "ground_truth": "Bệnh cháy lá chết ngọn trên sầu riêng do nấm Rhizoctonia solani gây ra."
+  },
+  {
+    "question": "Triệu chứng của bệnh cháy lá do nấm Rhizoctonia Solani trên sầu riêng là gì?",
+    "ground_truth": "Biểu hiện ban đầu là những đốm nhỏ, sũng nước, sau đó chúng liên kết lại thành mảng bất dạng nhũn nước hay phỏng nước sôi trên lá. Vết bệnh sau đó khô đi và chuyển sang màu nâu sáng."
+  },
+  {
+    "question": "Bệnh thán thư trên sầu riêng do nấm nào gây ra?",
+    "ground_truth": "Bệnh thán thư trên sầu riêng do nấm Colletotrichum gloeosporioides gây ra và thường xảy ra nhiều vào mùa mưa."
+  },
+  {
+    "question": "Biểu hiện của bệnh thán thư trên quả sầu riêng là gì?",
+    "ground_truth": "Khi quả bị nhiễm bệnh thán thư, các vết đốm sẽ xuất hiện ở vị trí hốc gai, sau đó lan rộng. Vết bệnh nặng sẽ chuyển sang màu đen ở phía giữa và có quầng vàng phía ngoài."
+  },
+  {
+    "question": "Bệnh vàng lá thối rễ trên sầu riêng do những loại nấm nào gây ra?",
+    "ground_truth": "Bệnh vàng lá thối rễ trên cây sầu riêng do các loại nấm như Fusarium sp., Phytophthora sp., và Pythium sp. gây ra."
+  },
+  {
+    "question": "Bệnh đốm lá ở sầu riêng do tác nhân nào gây ra và thường tấn công vào giai đoạn nào?",
+    "ground_truth": "Bệnh đốm lá do nấm Phomopsis gây ra và thường tấn công vào thời kỳ cây non."
+  },
+  {
+    "question": "Bệnh vàng lá gân xanh (Greening) trên cây có múi do tác nhân nào gây ra?",
+    "ground_truth": "Bệnh vàng lá gân xanh do vi khuẩn Candidatus Liberibacter asiaticus (Las) sống trong mạch dẫn của cây gây ra."
+  },
+  {
+    "question": "Côn trùng nào là vật trung gian chính truyền bệnh vàng lá gân xanh?",
+    "ground_truth": "Vật trung gian chính và nguy hiểm nhất truyền bệnh vàng lá gân xanh là rầy chổng cánh (Diaphorina citri)."
+  },
+  {
+    "question": "Triệu chứng của bệnh vàng lá gân xanh trên quả cây có múi là gì?",
+    "ground_truth": "Quả của cây bị bệnh thường có kích thước nhỏ, biến dạng, méo mó, vỏ dị da và không phát triển đều. Một số quả có thể bị chín sớm nhưng chất lượng rất kém, vị chua gắt."
+  },
+  {
+    "question": "Làm thế nào để phân biệt bệnh vàng lá gân xanh và triệu chứng thiếu kẽm?",
+    "ground_truth": "Vàng lá do thiếu kẽm có mức độ vàng đồng đều và đối xứng hai bên gân chính, trong khi vàng lá gân xanh gây vàng không đối xứng, loang lổ và thường chỉ xuất hiện rải rác theo cành."
+  },
+  {
+    "question": "Tác nhân gây bệnh mốc sương muộn trên khoai tây là gì?",
+    "ground_truth": "Bệnh mốc sương muộn trên khoai tây do nấm Phytophthora infestans gây ra."
+  },
+  {
+    "question": "Triệu chứng của bệnh mốc sương muộn trên lá khoai tây là gì?",
+    "ground_truth": "Lá bị thối rữa nhanh chóng, chảy nước, sau đó nhanh chóng tàn, nhăn nheo và chuyển sang màu nâu. Mặt dưới của lá có thể thấy sự phát triển 'nấm' màu trắng mịn."
+  },
+  {
+    "question": "Triệu chứng bệnh mốc sương muộn trên củ khoai tây biểu hiện như thế nào?",
+    "ground_truth": "Trên mặt củ, vết bệnh có màu nâu lõm xuống. Khi cắt ngang, từ ngoài vào trong ruột có từng chòm mô bị thâm nâu lan rộng vào phía trong."
+  },
+  {
+    "question": "Bệnh bạc lá sớm (Early Blight) trên cà chua do nấm nào gây ra?",
+    "ground_truth": "Bệnh bạc lá sớm trên cà chua do nấm Alternaria solani gây ra."
+  },
+  {
+    "question": "Dấu hiệu đặc trưng của bệnh bạc lá sớm trên lá cà chua là gì?",
+    "ground_truth": "Các đốm bệnh có hình dạng giống như mục tiêu, do các vòng đồng tâm của mô chết bị nâng lên và lõm xuống. Một vòng màu vàng thường bao quanh các đốm đang phát triển."
+  },
+  {
+    "question": "Bệnh đốm lá Septoria trên cà chua có dấu hiệu nhận biết như thế nào?",
+    "ground_truth": "Xuất hiện nhiều đốm nhỏ, hình tròn, màu nâu xám, đường kính khoảng 1-2 mm, giữa vết đốm thường có chấm đen (bào tử nấm)."
+  },
+  {
+    "question": "Bệnh đốm vi khuẩn trên ớt do loài vi khuẩn nào chiếm ưu thế ở Mỹ gây ra?",
+    "ground_truth": "Bệnh đốm vi khuẩn trên ớt chủ yếu do loài Xanthomonas euvesicatoria gây ra."
+  },
+  {
+    "question": "Triệu chứng bệnh đốm vi khuẩn trên trái ớt là gì?",
+    "ground_truth": "Các vết bệnh trên trái ban đầu xuất hiện dưới dạng các đốm nhỏ, nổi gờ, màu xanh nhạt. Sau đó chúng lớn dần, chuyển sang màu nâu đến đen, và xuất hiện dưới dạng các nốt sần hoặc vảy nổi."
+  },
+  {
+    "question": "Virus gây xoăn lá vàng cà chua (TYLCV) lây truyền qua vector nào?",
+    "ground_truth": "Virus gây xoăn lá vàng cà chua (TYLCV) được lây truyền bởi bọ phấn trắng (Bemisia tabaci)."
+  },
+  {
+    "question": "Triệu chứng của bệnh xoăn lá vàng trên cà chua là gì?",
+    "ground_truth": "Lá non thường bị vàng ở mép và giữa các gân lá, sau đó lá có thể bị xoăn lên hoặc xuống. Cây bị nhiễm bệnh thường còi cọc và chậm phát triển."
+  },
+  {
+    "question": "Nguyên nhân gây bệnh phấn trắng trên bầu bí là gì?",
+    "ground_truth": "Bệnh phấn trắng trên bầu bí do nấm thuộc bộ Erysiphales, mà tác nhân chính là Golovinomyces, gây ra."
+  },
+  {
+    "question": "Bệnh đốm mốc đen trên cà chua do nấm nào gây ra?",
+    "ground_truth": "Bệnh mốc lá cà chua (đốm mốc đen) do nấm Passalora fulva (trước đây gọi là Fulvia fulva hoặc Cladosporium fulvum) gây ra."
+  },
+  {
+    "question": "Bệnh rỉ sắt trên cây nho do tác nhân nào gây ra ở Việt Nam?",
+    "ground_truth": "Ở Việt Nam, tác nhân gây bệnh rỉ sắt trên cây nho được xác định là nấm Kuehneola vitis."
+  },
+  {
+    "question": "Triệu chứng của bệnh héo vàng trên cà chua do nấm Fusarium oxysporum là gì?",
+    "ground_truth": "Cây có biểu hiện vàng từ lá chét một bên, sau đó lan ra toàn cây. Cây héo rủ vào ban ngày và phục hồi vào ban đêm. Khi chẻ dọc thân, mạch xylem bị biến thành màu nâu hoặc nâu đỏ."
+  },
+  {
+    "question": "Bệnh gỉ sắt trên ngô (bắp) do nấm nào gây ra?",
+    "ground_truth": "Tác nhân gây ra bệnh gỉ sắt trên ngô là nấm Puccinia maydis."
+  },
+  {
+    "question": "Bệnh đốm lá lớn trên ngô do tác nhân nào gây ra?",
+    "ground_truth": "Bệnh đốm lá lớn ở ngô (bắp) gây ra bởi nấm Helminthosporium Turcicum Pass."
+  },
+  {
+    "question": "Triệu chứng của bệnh đốm lá lớn trên ngô là gì?",
+    "ground_truth": "Ban đầu vết bệnh là vệt nhỏ, dạng ngậm nước, sau lớn dần có hình thoi, trung tâm vết bệnh có màu nâu sáng, xung quanh màu nâu tối."
+  },
+  {
+    "question": "Bệnh Esca trên cây nho do loài nấm nào gây ra chủ yếu?",
+    "ground_truth": "Các triệu chứng của bệnh Esca chủ yếu được gây ra bởi loài nấm có tên khoa học là Togninia minima."
+  },
+  {
+    "question": "Bệnh thán thư (black rot) trên nho do nấm nào gây ra?",
+    "ground_truth": "Bệnh thán thư (black rot) trên nho được gây ra bởi nấm Guignarida bidwellii."
+  },
+  {
+    "question": "Triệu chứng của bệnh thán thư (black rot) trên quả nho là gì?",
+    "ground_truth": "Quả nho sẽ chuyển sang màu nâu và nhanh chóng bị teo lại, trở nên nhỏ, đen và cứng. Những quả nho khô, bị bệnh này được gọi là \"xác ướp\" (mummies)."
+  },
+  {
+    "question": "Tác nhân gây bệnh đốm lá Cercospora trên cà chua là gì?",
+    "ground_truth": "Bệnh đốm lá Cercospora do nấm Cercospora spp. gây ra."
+  },
+  {
+    "question": "Bệnh mốc xám trên cà chua do nấm nào gây ra?",
+    "ground_truth": "Bệnh mốc xám trên cà chua do nấm Botrytis cinerea gây ra."
+  },
+  {
+    "question": "Nhện hai chấm có tên khoa học là gì?",
+    "ground_truth": "Nhện hai chấm có tên khoa học là Tetranychus urticae."
+  },
+  {
+    "question": "Làm thế nào để nhận biết thiệt hại do nhện hai chấm gây ra trên lá cây?",
+    "ground_truth": "Thiệt hại do nhện hai chấm có thể nhìn thấy trên bề mặt trên của lá dưới dạng các chấm vàng nhỏ. Sự phá hủy tế bào dẫn đến giảm quang hợp, tăng thoát hơi nước và giảm sinh trưởng của cây."
+  },
+  {
+    "question": "Tác nhân gây bệnh đốm vi khuẩn hại đào là gì?",
+    "ground_truth": "Bệnh đốm vi khuẩn trên đào do vi khuẩn Xanthomonas pruni Dawson gây ra."
+  },
+  {
+    "question": "Bệnh cháy lá trên dâu tây (leaf scorch) do nấm nào gây ra?",
+    "ground_truth": "Bệnh cháy lá trên dâu tây do nấm Diplocarpon fragariae (tên cũ là Marssonina fragariae) gây ra."
+  },
+  {
+    "question": "Điều kiện nào thuận lợi cho bệnh cháy lá chết ngọn (do nấm Rhizoctonia sp.) ở sầu riêng phát triển?",
+    "ground_truth": "Bệnh phát triển mạnh trong điều kiện ẩm ướt, nhiệt độ thích hợp là 28 độ C. Bệnh phát triển kém ở 35 độ C và ngưng ở 100 độ C."
+  },
+  {
+    "question": "Biện pháp hóa học nào được đề xuất để phòng trừ bệnh cháy lá chết ngọn trên sầu riêng?",
+    "ground_truth": "Phun thuốc ngừa nấm bằng một trong các loại thuốc gốc đồng, mancozeb, metalaxyl. Khi bệnh đã có triệu chứng thì dùng thuốc đặc trị dạng thấm sâu như azoxystrobin, difenoconazole."
+  },
+  {
+    "question": "Để phòng trừ bệnh vàng lá gân xanh, việc quản lý rầy chổng cánh có thể thực hiện bằng biện pháp sinh học nào?",
+    "ground_truth": "Có thể sử dụng các biện pháp sinh học như thả thiên địch, hoặc dùng bẫy dính màu vàng để thu hút và tiêu diệt rầy chổng cánh."
+  },
+  {
+    "question": "Bệnh bạc lá muộn (late blight) trên khoai tây lây lan mạnh trong điều kiện thời tiết như thế nào?",
+    "ground_truth": "Bệnh bạc lá muộn phát triển mạnh trong thời tiết mát mẻ (60-78°F, khoảng 15-25°C), ẩm ướt, và có thể giết chết cây trong vòng hai tuần nếu điều kiện thuận lợi."
+  },
+  {
+    "question": "Biện pháp canh tác nào giúp phòng ngừa bệnh bạc lá sớm trên khoai tây?",
+    "ground_truth": "Các biện pháp bao gồm trồng giống kháng bệnh, giữ cây khỏe mạnh, tránh tưới lên lá, luân canh với cây trồng không phải họ cà chua, và sử dụng đủ lượng nitơ, lượng phốt pho thấp."
+  },
+  {
+    "question": "Bệnh đốm vệt vi khuẩn (bacterial speck) trên cà chua do vi khuẩn nào gây ra?",
+    "ground_truth": "Bệnh đốm vệt vi khuẩn trên cà chua do vi khuẩn Pseudomonas syringae pv. tomato gây ra."
+  },
+  {
+    "question": "Bệnh đốm đen vi khuẩn (bacterial spot) trên cà chua phát triển thuận lợi ở nhiệt độ nào?",
+    "ground_truth": "Bệnh này phát triển thuận lợi ở nhiệt độ ấm hơn, từ 75 đến 86°F (khoảng 24-30°C) và độ ẩm cao."
+  },
+  {
+    "question": "Làm thế nào để phân biệt triệu chứng bệnh đốm đen và đốm vệt vi khuẩn trên quả cà chua?",
+    "ground_truth": "Bệnh đốm đen gây ra các đốm quả lớn hơn so với bệnh đốm vệt. Đốm của bệnh đốm đen có thể đạt đường kính 1/3 inch, trong khi đốm của bệnh đốm vệt nhỏ hơn 1/16 inch."
+  },
+  {
+    "question": "Tác nhân gây bệnh đốm lá lớn trên ngô (bắp) tồn tại qua mùa đông bằng cách nào?",
+    "ground_truth": "Bào tử phân sinh tồn tại trên hạt giống và sợi nấm tồn tại trong tàn dư lá cây ở đất là nguồn bệnh lây nhiễm."
+  },
+  {
+    "question": "Loài thiên địch nào là kẻ thù tự nhiên quan trọng nhất của nhện hai chấm?",
+    "ground_truth": "Nhện ăn thịt Phytoseiulus persimilis là kẻ thù tự nhiên quan trọng nhất của nhện hai chấm (Tetranychus urticae)."
   }
 ]

@@ -16,7 +16,10 @@ else:
     device = "cpu"
 
 # Load model to the determined device
-model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# model_name = "intfloat/multilingual-e5-large-instruct"
+model_name = "HIT-TMG/KaLM-embedding-multilingual-mini-v1" 
+# model_name = "ibm-granite/granite-embedding-278m-multilingual" 
 print(f"\nLoading model '{model_name}' onto device '{device}'...")
 try:
     model = SentenceTransformer(model_name, device=device)
@@ -29,8 +32,8 @@ except Exception as e:
 
 
 # Load JSONL data safely
-input_path = "./rawData/data3.jsonl"
-output_path = "./encodedData/encoded_blocks4.jsonl"
+input_path = "./rawData/data5.jsonl"
+output_path = "./encodedData_Final/encoded_blocks_HIT_TMG_KaLM_embedding_multilingual_mini_v1_5.jsonl"
 print(f"\nReading and validating JSONL data from: {input_path}")
 
 valid_lines_data = [] # List chứa các dictionary JSON hợp lệ đã đọc

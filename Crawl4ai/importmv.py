@@ -7,18 +7,24 @@ import traceback
 
 # --- Cấu hình ---
 # Đổi tên collection mới để không bị ảnh hưởng bởi dữ liệu cũ
-COLLECTION_NAME = "rag_collection_v2"
+# COLLECTION_NAME = "rag_collection_v2" # for senteence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+# COLLECTION_NAME = "rag_collection_multilingual_e5_large_instruct"
+COLLECTION_NAME = "rag_collection_KaLM_embedding_multilingual_mini_v1"  # For multilingual-e5-large-instruct
+# COLLECTION_NAME = "rag_collection_ibm_granite_granite_embedding_278m_multilingual"  # For ibm-granite/granite-embedding-278m-multilingual
 MILVUS_HOST = "localhost"
 MILVUS_PORT = "19530"
 BATCH_SIZE = 1000
-EMBEDDING_DIM = 384
-MAX_TAG_CAPACITY = 100 
+# EMBEDDING_DIM = 384 # For sentence transformer default
+# EMBEDDING_DIM = 1024 # For multilingual-e5-large-instruct
+EMBEDDING_DIM = 896 # For HIT-TMG/KaLM-embedding-multilingual-mini-v1
+# EMBEDDING_DIM = 768  # For ibm-granite/granite-embedding-278m-multilingual
+MAX_TAG_CAPACITY = 100
 
 # --- CẤU HÌNH QUAN TRỌNG ---
 # Đường dẫn đến thư mục chứa dữ liệu
-DATA_DIRECTORY = "../Crawl4ai/encodedData/"
+DATA_DIRECTORY = "../Crawl4ai/encodedData_final/"
 # Mẫu để tìm các file dữ liệu
-FILE_PATTERN = "encoded_blocks*.jsonl"
+FILE_PATTERN = "encoded_blocks_HIT_TMG_KaLM_embedding_multilingual_mini_v1_*.jsonl"
 # Đặt thành True nếu bạn muốn xóa sạch collection cũ trước khi import
 RECREATE_COLLECTION = True
 

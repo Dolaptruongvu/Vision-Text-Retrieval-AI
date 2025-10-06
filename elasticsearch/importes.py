@@ -9,12 +9,12 @@ import traceback
 
 # --- Cấu hình ---
 ES_HOST = "http://127.0.0.1:9200"
-INDEX_NAME = "my_rag_index_final" # Đặt tên index bạn muốn
-EXPECTED_EMBEDDING_DIM = 384
+INDEX_NAME = "my_rag_index_final2" # Đặt tên index bạn muốn
+EXPECTED_EMBEDDING_DIM = 896
 
 # --- CẤU HÌNH QUAN TRỌNG ---
 # Đường dẫn đến thư mục chứa dữ liệu
-DATA_DIRECTORY = "../Crawl4ai/encodedData/"
+DATA_DIRECTORY = "../Crawl4ai/encodedData_final/"
 # Mẫu để tìm các file dữ liệu
 FILE_PATTERN = "encoded_blocks*.jsonl"
 # Đặt thành True nếu bạn muốn xóa sạch index cũ trước khi import
@@ -35,10 +35,11 @@ INDEX_MAPPING = {
     }
 }
 
-def generate_actions_from_files(file_paths, index_name):
+def load_and_deduplicate_data(file_paths):
     """
-    Đọc nhiều file JSONL, xác thực từng dòng và tạo ra các actions cho Bulk API.
+    Đọc tất cả file và loại bỏ trùng lặp như Milvus script
     """
+    all_data = {}
     skipped_count = 0
     
     for filepath in file_paths:
@@ -52,33 +53,41 @@ def generate_actions_from_files(file_paths, index_name):
                     embedding = doc_data.get("embedding")
 
                     # Xác thực dữ liệu
+                    if not doc_id:
+                        skipped_count += 1
+                        continue
                     if not embedding or len(embedding) != EXPECTED_EMBEDDING_DIM:
-                        # Bỏ qua lặng lẽ để không làm rối log, bạn có thể thêm print nếu cần
                         skipped_count += 1
                         continue
                     
-                    source_doc = {
-                        "content": doc_data.get("content"),
-                        "tags": doc_data.get("tags"),
+                    # Lưu vào dict, tự động ghi đè nếu ID trùng lặp
+                    all_data[doc_id] = {
+                        "content": doc_data.get("content", ""),
+                        "tags": doc_data.get("tags", []) or [],
                         "embedding": embedding
                     }
-                    source_doc = {k: v for k, v in source_doc.items() if v is not None}
-                    
-                    action = {
-                        "_index": index_name,
-                        "_source": source_doc
-                    }
-                    if doc_id:
-                        action["_id"] = doc_id
-                    
-                    yield action
 
                 except (json.JSONDecodeError, KeyError, TypeError):
                     skipped_count += 1
                     continue
     
-    if skipped_count > 0:
-        print(f"\n[INFO] Total lines skipped due to validation errors: {skipped_count}")
+    print(f"\n[INFO] Total unique documents: {len(all_data)}")
+    print(f"[INFO] Total lines skipped due to validation errors: {skipped_count}")
+    return all_data
+
+def generate_actions_from_data(data_dict, index_name):
+    """
+    Tạo actions từ dictionary đã được de-duplicate
+    """
+    for doc_id, doc_data in data_dict.items():
+        source_doc = {k: v for k, v in doc_data.items() if v is not None}
+        
+        action = {
+            "_index": index_name,
+            "_id": doc_id,
+            "_source": source_doc
+        }
+        yield action
 
 # --- Bắt đầu Script ---
 
@@ -125,22 +134,20 @@ except Exception as e:
     print(f"Error managing index '{INDEX_NAME}': {e}")
     exit()
 
-# 4. Thực hiện Bulk Indexing từ tất cả các file
-print(f"\nStarting bulk indexing for {len(file_list)} files into '{INDEX_NAME}'...")
+# 4. Load và deduplicate dữ liệu trước khi bulk indexing
+print(f"\nStep 1: Loading and de-duplicating data from {len(file_list)} files...")
+unique_data = load_and_deduplicate_data(file_list)
+
+print(f"\nStep 2: Starting bulk indexing for {len(unique_data)} unique documents into '{INDEX_NAME}'...")
 start_time = time.time()
 success_count = 0
 failed_count = 0
 error_details = []
 
 try:
-    # Đếm tổng số dòng từ tất cả các file để tqdm hiển thị chính xác
-    print("Calculating total documents...")
-    total_lines = sum(1 for f in file_list for line in open(f, 'r', encoding='utf-8'))
-    print(f"Total documents to process: {total_lines}")
-
-    action_generator = generate_actions_from_files(file_list, INDEX_NAME)
+    action_generator = generate_actions_from_data(unique_data, INDEX_NAME)
     
-    progress_bar = tqdm(total=total_lines, unit="docs", desc="Indexing to ES")
+    progress_bar = tqdm(total=len(unique_data), unit="docs", desc="Indexing to ES")
     
     for ok, result in streaming_bulk(
         client=es_client,
@@ -176,8 +183,10 @@ print(f"Total time taken: {end_time - start_time:.2f} seconds")
 print(f"Successfully indexed operations: {success_count}")
 print(f"Failed operations: {failed_count}")
 
-# Lấy số lượng tài liệu thực tế trong index
+# Flush và lấy số lượng tài liệu thực tế trong index
 try:
+    print("Flushing index to ensure all documents are committed...")
+    es_client.indices.flush(index=INDEX_NAME)
     final_count = es_client.count(index=INDEX_NAME)['count']
     print(f"Total documents actually in index '{INDEX_NAME}': {final_count}")
 except Exception as e:

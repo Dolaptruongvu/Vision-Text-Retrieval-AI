@@ -37,7 +37,8 @@ async def main():
     # Keep original LLM extraction strategy setup
     llm_strategy = LLMExtractionStrategy(
         llm_config=LLMConfig(
-            provider="gemini/gemini-2.0-flash-exp", # Keep original model
+            # provider="gemini/gemini-2.0-flash-exp", # Keep original model
+            provider="gemini/gemini-2.5-flash-lite", # Keep original model
             api_token=gemini_token
         ),
         extraction_type="schema",
@@ -164,13 +165,13 @@ async def main():
 
     # Initialize crawler
     async with AsyncWebCrawler(config=BrowserConfig(headless=True)) as crawler:
-        start_url = "https://phys.org/tags/plant+pathology/" 
+        start_url = "https://agriculture.vic.gov.au/biosecurity/plant-diseases/vegetable-diseases/tomato-yellow-leaf-curl-virus" 
         print(f"Starting prioritized deep crawl from: {start_url} with streaming enabled.")
 
         
         print("\n--- Extracting RAG blocks and appending to file ---")
         pages_processed_this_run = 0
-        output_file = "./rawData/rag_blocks_milvus.jsonl" 
+        output_file = "./rawData/data5.jsonl" 
 
         
         with open(output_file, "a", encoding="utf-8") as f:

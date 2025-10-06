@@ -1,7 +1,7 @@
 from pymilvus import connections, Collection, utility
 
 # --- Cấu hình ---
-COLLECTION_NAME = "rag_blocks"
+COLLECTION_NAME = "rag_collection_v2"
 MILVUS_HOST = "localhost"
 MILVUS_PORT = "19530"
 

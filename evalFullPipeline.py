@@ -11,7 +11,6 @@ from datasets import Dataset
 import sys
 import math
 import json
-
 # --- Haystack Core & Standard Components ---
 from haystack import Pipeline, Document, component
 from haystack.components.builders import ChatPromptBuilder
@@ -76,25 +75,40 @@ hf_token = get_env_var("HF_TOKEN", is_critical=False)
 MILVUS_URI = get_env_var("MILVUS_HOST", default_value="http://localhost:19530")
 ES_HOST = get_env_var("ES_HOST", default_value="http://127.0.0.1:9200")
 OLLAMA_URL = get_env_var("OLLAMA_URL", default_value="http://localhost:11434")
-OLLAMA_MODEL_NAME = get_env_var("OLLAMA_MODEL", default_value="gemma3:latest")
+OLLAMA_MODEL_NAME = get_env_var("OLLAMA_MODEL", default_value="gemma3:4b")
+# OLLAMA_MODEL_NAME = get_env_var("OLLAMA_MODEL", default_value="gemma3n:e4b")
+# OLLAMA_MODEL_NAME = get_env_var("OLLAMA_MODEL", default_value="llama3.2:3b")
+# OLLAMA_MODEL_NAME = get_env_var("OLLAMA_MODEL", default_value="qwen3:8b")
 GOOGLE_API_KEY = get_env_var("GOOGLE_API_KEY")
 GOOGLE_AI_MODEL_NAME_RAGAS = get_env_var("GOOGLE_AI_MODEL_NAME_RAGAS", default_value="gemini-2.5-flash-latest")
 
 # --- Other Configurations ---
 HF_TOKEN = Secret.from_token(hf_token) if hf_token else None
-EXPECTED_EMBEDDING_DIM = 384
-COLLECTION_NAME = "rag_collection_v2"
+# EXPECTED_EMBEDDING_DIM = 384 ## for sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+# EXPECTED_EMBEDDING_DIM = 1024 ## for multilingual-e5-large-instruct
+# EXPECTED_EMBEDDING_DIM = 896 ## for HIT-TMG/KaLM-embedding-multilingual-mini-v1
+EXPECTED_EMBEDDING_DIM = 768 ## for ibm-granite/granite-embedding-278m-multilingual
+# COLLECTION_NAME = "rag_collection_v2" # for senteence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+# COLLECTION_NAME = "rag_collection_multilingual_e5_large_instruct"  # for multilingual-e5-large-instruct
+# COLLECTION_NAME = "rag_collection_KaLM_embedding_multilingual_mini_v1"  # for multilingual-e5-large-instruct
+COLLECTION_NAME = "rag_collection_ibm_granite_granite_embedding_278m_multilingual"  # For ibm-granite/granite-embedding-278m-multilingual
 VECTOR_FIELD_NAME = "embedding"
 TEXT_FIELD_NAME_MILVUS = "content"
 MILVUS_INDEX_PARAMS = {"index_type": "DISKANN", "metric_type": "COSINE", "params": {"search_list": 100}}
 MILVUS_SEARCH_PARAMS = {"metric_type": "COSINE", "params": {"search_list": 100}}
-MILVUS_TOP_K = 7
+MILVUS_TOP_K = 15 # old 7 10
 ES_INDEX_NAME = "my_rag_index_final"
-ES_BM25_TOP_K = 7
-RANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-12-v2"
-RANKER_FINAL_TOP_K = 5
-EMBEDDER_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-OLLAMA_TIMEOUT = 300
+ES_BM25_TOP_K = 15 # old 7 10
+# RANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-12-v2"
+# RANKER_MODEL_NAME = "jinaai/jina-reranker-v2-base-multilingual"
+# RANKER_MODEL_NAME = "tomaarsen/reranker-ModernBERT-large-gooaq-bce"
+RANKER_MODEL_NAME = "BAAI/bge-reranker-v2-m3"
+RANKER_FINAL_TOP_K = 8
+# EMBEDDER_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# EMBEDDER_MODEL_NAME = "intfloat/multilingual-e5-large-instruct"
+# EMBEDDER_MODEL_NAME = "HIT-TMG/KaLM-embedding-multilingual-mini-v1"  # For HIT-TMG/KaLM-embedding-multilingual-mini-v1
+EMBEDDER_MODEL_NAME = "ibm-granite/granite-embedding-278m-multilingual"  # For ibm-granite/granite-embedding-278m-multilingual
+OLLAMA_TIMEOUT = 600  # Tăng từ 300 lên 600 giây (10 phút)
 RAGAS_GOOGLE_AI_TIMEOUT = 360.0
 
 # <<< THAY ĐỔI: Tăng batch size và loại bỏ cấu hình delay >>>
@@ -146,7 +160,7 @@ try:
 
     # Joiner & Ranker
     joiner = DocumentJoiner(join_mode="concatenate")
-    ranker = TransformersSimilarityRanker(model=RANKER_MODEL_NAME, top_k=RANKER_FINAL_TOP_K, token=HF_TOKEN, device=device)
+    ranker = TransformersSimilarityRanker(model=RANKER_MODEL_NAME, top_k=RANKER_FINAL_TOP_K, token=HF_TOKEN, device=device,model_kwargs={"trust_remote_code": True} )
     ranker.warm_up()
 
     # Simple Prompt Builder for Evaluation
@@ -194,13 +208,27 @@ try:
         "    *   Use `{{ documents }}` to find information relevant to the **Context** (if available) or directly relevant to `{{ query }}`."
         "    *   Avoid video links."
         "\n"
+        "--- UNIVERSAL RULE THAT APPLIES TO ALL RESPONSES ---"
+        "\n"
+        "**RULE 5: SOURCE CITATION REQUIREMENT (ANTI-HALLUCINATION)**"
+        "\n"
+        "*   **CONDITION:** When using `{{ documents }}` in Rules 2 or 4 (NOT applicable to Rules 1 or 3)."
+        "*   **MANDATORY ACTION:**"
+        "    1.  At the end of your response, add a section: '**Nguồn tham khảo:**'"
+        "    2.  For EACH document used, extract and display the source URL/link if available in document metadata."
+        "    3.  Format: List each source link on a new line: '- [URL/Link from document metadata]'"
+        "    4.  If no URL is found in metadata, mention the document ID or title instead."
+        "    5.  Always end with: 'Thông tin được trích xuất từ hệ thống RAG (Milvus + Elasticsearch).'"
+        "    6.  This ensures transparency and prevents hallucination by providing verifiable sources."
+        "\n"
         "**MOST CRITICAL REMINDERS:**"
         "\n"
-        "1.  **ADHERE TO RULE ORDER: 1 -> 2 -> 3 -> 4.**"
+        "1.  **ADHERE TO RULE ORDER: 1 -> 2 -> 3 -> 4, with Rule 5 applied when documents are used.**"
         "2.  **ALWAYS RESPOND IN VIETNAMESE.** THIS IS MANDATORY."
         "3.  **RULE 1 IS ABSOLUTE:** When triggered, it overrides everything else and FORBIDS document usage."
         "4.  **RULE 3 ALSO FORBIDS DOCUMENT USAGE** for off-topic questions."
-        "5.  Maintain **Context** once identified in Rule 2 or 4 for follow-up turns."
+        "5.  **RULE 5 IS MANDATORY** when documents are used in Rules 2 or 4."
+        "6.  Maintain **Context** once identified in Rule 2 or 4 for follow-up turns."
     ),
     ChatMessage.from_user(
          """**Chat History:**
@@ -218,7 +246,8 @@ try:
         {% if documents %}
             {% for doc in documents %}
             ---
-            {{ doc.content }}
+            **Content:** {{ doc.content }}
+            {% if doc.meta %}**Metadata:** {{ doc.meta }}{% endif %}
             ---
             {% endfor %}
         {% else %}

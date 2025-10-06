@@ -21,7 +21,7 @@ async def main():
     # Cấu hình LLM strategy
     llm_strategy = LLMExtractionStrategy(
         llm_config=LLMConfig(
-            provider="gemini/gemini-2.0-flash-exp",
+            provider="gemini/gemini-2.5-flash",
             api_token=gemini_token
         ),
         extraction_type="schema",
@@ -49,7 +49,7 @@ async def main():
 
     async with AsyncWebCrawler(config=BrowserConfig(headless=True)) as crawler:
         result = await crawler.arun(
-            url="https://bachnong.vn/tin-tuc/tin-tuc-nong-nghiep/huong-dan-trong-cam-cho-nang-suat-cao.html",
+            url="https://anphatnong.com.vn/benh-dom-rong-tren-cay-sau-rieng-nguyen-nhan-va-cach-xu-ly",
             config=config
         )
 
