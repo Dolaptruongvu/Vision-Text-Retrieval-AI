@@ -1,5 +1,5 @@
 # Vision Service - Plant Disease Detection API
-# Port: 5001
+# Port: 5003
 # Model: ViT-B/16 Finetuned
 
 import os
@@ -9,6 +9,7 @@ from torchvision import transforms, models
 from PIL import Image
 from flask import Flask, request, jsonify
 import traceback
+import requests as py_requests
 
 # ============================================================================
 # MODEL DEFINITION - ViT
@@ -28,6 +29,8 @@ class SimpleViT(nn.Module):
 CHECKPOINT_PATH = "./modelsCP/vit_finetune/vit_finetune_best.pth"
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+BACKEND_URL = "http://localhost:5004"
+REQUIRE_AUTH = os.getenv('REQUIRE_AUTH', 'true').lower() == 'true'  # Can disable in .env
 
 # ============================================================================
 # FLASK APP
@@ -76,6 +79,39 @@ def load_vision_model():
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
+def verify_user_token(token):
+    """Verify JWT token with backend API"""
+    if not REQUIRE_AUTH:
+        return {'verified': True, 'user': None, 'message': 'Auth disabled'}
+    
+    if not token:
+        return {'verified': False, 'error': 'No token provided'}
+    
+    try:
+        response = py_requests.get(
+            f"{BACKEND_URL}/api/auth/me",
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'verified': True,
+                'user': data['data']['user']
+            }
+        else:
+            return {
+                'verified': False,
+                'error': 'Invalid or expired token'
+            }
+    except Exception as e:
+        print(f"[VISION SERVICE] Token verification error: {e}")
+        return {
+            'verified': False,
+            'error': f'Authentication service error: {str(e)}'
+        }
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -128,32 +164,76 @@ def predict():
     """
     Main API endpoint - Receives image and/or text, returns AI response
     
+    🔐 REQUIRES AUTHENTICATION (JWT Token)
+    
     Input (multipart/form-data):
         - image: File (optional) - Plant disease image
         - query: String (optional) - User question text
+        - token: String (REQUIRED) - JWT token from login
+        
+    OR Authorization Header:
+        - Authorization: Bearer <JWT_TOKEN>
     
     Output:
         {
             "success": true/false,
+            "user": {"id": "...", "username": "...", "email": "..."},
             "vision_result": {
                 "disease": "cleaned disease name",
                 "confidence": 0.95
             },
             "ai_response": "Full answer from LLM",
+            "saved_to_db": true/false,
+            "record_id": "mongodb_id",
             "error": "error message (if failed)"
         }
     
     Flow:
-        1. If image provided: Vision predicts disease
-        2. Format query with disease context (if available)
-        3. Call LLM Service with formatted query
-        4. Return combined result
+        1. [NEW] Verify JWT token with Backend
+        2. If image provided: Vision predicts disease
+        3. Format query with disease context (if available)
+        4. Call LLM Service with formatted query
+        5. Save result to MongoDB via Backend API (with user ID)
+        6. Return combined result
     """
     import requests
+    import time
     
     LLM_SERVICE_URL = "http://localhost:5002/get_rag_response"
+    BACKEND_SAVE_URL = "http://localhost:5004/api/disease/save"
     
-    # Get inputs
+    # Track processing time
+    start_time = time.time()
+    
+    # Step 1: AUTHENTICATION - Verify user token
+    user_token = None
+    
+    # Try to get token from Authorization header
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        user_token = auth_header.split(' ')[1]
+    # Fallback to form data
+    elif request.form.get('token'):
+        user_token = request.form.get('token', '').strip()
+    
+    # Verify token
+    auth_result = verify_user_token(user_token)
+    
+    if not auth_result['verified']:
+        print(f"[VISION SERVICE] Authentication failed: {auth_result.get('error')}")
+        return jsonify({
+            'success': False,
+            'error': auth_result.get('error', 'Authentication required'),
+            'message': 'Please login first to use the prediction service',
+            'code': 'AUTHENTICATION_REQUIRED'
+        }), 401
+    
+    # Get authenticated user info
+    authenticated_user = auth_result.get('user')
+    if authenticated_user:
+        print(f"[VISION SERVICE] Authenticated user: {authenticated_user.get('username')} ({authenticated_user.get('email')})")
+    
+    # Get other inputs
     image_file = request.files.get('image')
     user_query = request.form.get('query', '').strip()
     
@@ -282,12 +362,64 @@ def predict():
         
         print(f"[VISION SERVICE] LLM response received (length: {len(ai_response)} chars)")
         
-        # Step 4: Return combined result
-        return jsonify({
+        # Step 4: Save to MongoDB via Backend API (if user is authenticated)
+        saved_to_db = False
+        disease_record_id = None
+        
+        if user_token and vision_result:
+            try:
+                processing_time = int((time.time() - start_time) * 1000)  # milliseconds
+                
+                save_payload = {
+                    'diseaseName': vision_result['disease'],
+                    'diseaseNameRaw': vision_result.get('raw_disease', vision_result['disease']),
+                    'confidence': vision_result['confidence'],
+                    'userQuery': user_query,
+                    'aiResponse': ai_response,
+                    'imageName': image_file.filename if image_file else None,
+                    'processingTime': processing_time
+                }
+                
+                save_response = requests.post(
+                    BACKEND_SAVE_URL,
+                    json=save_payload,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Authorization': f'Bearer {user_token}'
+                    },
+                    timeout=5
+                )
+                
+                if save_response.status_code == 201:
+                    save_data = save_response.json()
+                    disease_record_id = save_data.get('data', {}).get('id')
+                    saved_to_db = True
+                    print(f"[VISION SERVICE] Result saved to database (ID: {disease_record_id})")
+                else:
+                    print(f"[VISION SERVICE] Failed to save to database: {save_response.status_code}")
+                    
+            except Exception as save_error:
+                print(f"[VISION SERVICE] Error saving to database: {save_error}")
+                # Don't fail the main request if saving fails
+        
+        # Step 5: Return combined result
+        response_data = {
             'success': True,
             'vision_result': vision_result,
-            'ai_response': ai_response
-        })
+            'ai_response': ai_response,
+            'saved_to_db': saved_to_db,
+            'record_id': disease_record_id
+        }
+        
+        # Include user info if available
+        if authenticated_user:
+            response_data['user'] = {
+                'id': authenticated_user.get('id'),
+                'username': authenticated_user.get('username'),
+                'email': authenticated_user.get('email')
+            }
+        
+        return jsonify(response_data)
         
     except requests.exceptions.Timeout:
         print(f"[VISION SERVICE] LLM Service timeout")
