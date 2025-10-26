@@ -343,15 +343,7 @@ def initialize_rag_pipeline():
         {% endfor %}
 
         {% if identified_disease %}
-        **⚠️ CRITICAL: Image Analysis Result (98%+ Accuracy AI Vision Model):** 
-        {{ identified_disease }}
-        
-        **⚠️ MANDATORY REQUIREMENTS:**
-        1. YOU MUST USE THIS EXACT DISEASE NAME IN YOUR RESPONSE.
-        2. DO NOT diagnose any other disease. This is the ground truth from computer vision.
-        3. ONLY use documents that mention THIS SPECIFIC disease and plant. If a document talks about a different plant (e.g., apple when Image shows tomato) or different disease (e.g., scab when Image shows blight), DO NOT USE THAT DOCUMENT - it is irrelevant and will cause hallucination.
-        4. CHECK EACH DOCUMENT BEFORE USING: Does it mention the plant "{{ identified_disease.split('-')[0].strip() if '-' in identified_disease else identified_disease }}"? Does it mention the disease type? If NO to either question, SKIP that document.
-        5. PROVIDE DETAILED ADVICE - do not just say "contact an expert" without giving information first.
+        **Image Analysis Result:** {{ identified_disease }}
         {% endif %}
 
         **Reference Documents:**
@@ -536,20 +528,86 @@ def handle_rag_request():
         if identified_disease:
             print(f"[LLM SERVICE] Disease context: '{identified_disease}'")
         
+        # ============================================================================
+        # ENHANCED SEARCH QUERY - Use disease name for better retrieval
+        # ============================================================================
+        search_query = user_query
+        
+        if identified_disease:
+            # Extract plant and disease type from "Plant - Disease" format
+            # Example: "Strawberry - Leaf scorch" -> "Strawberry Leaf scorch"
+            enhanced_query = identified_disease.replace(' - ', ' ')
+            
+            # If user asks generic questions, use disease name for search
+            generic_questions = ['đây là bệnh gì', 'bệnh này', 'cây này', 'what disease', 'what is this']
+            if any(gq in user_query.lower() for gq in generic_questions):
+                search_query = enhanced_query
+                print(f"[LLM SERVICE] Enhanced search query: '{search_query}' (generic question detected)")
+            else:
+                # Combine user query with disease name for better context
+                search_query = f"{enhanced_query} {user_query}"
+                print(f"[LLM SERVICE] Enhanced search query: '{search_query}' (combined)")
+        
+        # ============================================================================
+        # SMART QUERY DETECTION - Skip RAG for simple greetings/small talk
+        # ============================================================================
+        query_lower = user_query.lower().strip()
+        
+        # Simple greetings (1-3 words)
+        simple_greetings = [
+            'hi', 'hello', 'chào', 'xin chào', 'hey', 'yo',
+            'chào bạn', 'xin chao', 'hello there', 'hi there',
+            'good morning', 'good afternoon', 'good evening',
+            'chào buổi sáng', 'chào buổi chiều', 'chào buổi tối'
+        ]
+        
+        # Check if query is just a greeting (no disease context)
+        if not identified_disease and query_lower in simple_greetings:
+            print(f"[LLM SERVICE] Detected simple greeting - Quick response (no RAG)")
+            quick_response = """Xin chào! 👋 Tôi là trợ lý AI chuyên về bệnh cây trồng.
+
+Tôi có thể giúp bạn:
+• 🔍 Chẩn đoán bệnh từ ảnh cây trồng
+• 💊 Tư vấn phương pháp phòng trừ bệnh
+• 🌱 Giải đáp thắc mắc về triệu chứng bệnh
+• 📚 Cung cấp thông tin về các loại bệnh phổ biến
+
+Hãy upload ảnh cây trồng hoặc đặt câu hỏi để bắt đầu!"""
+            
+            return jsonify({
+                'success': True,
+                'answer': quick_response,
+                'quick_reply': True
+            })
+        
+        # Check if query is too short and has no disease context (likely not a real question)
+        word_count = len(user_query.split())
+        if not identified_disease and word_count <= 2:
+            print(f"[LLM SERVICE] Query too short ({word_count} words) - Quick response")
+            return jsonify({
+                'success': True,
+                'answer': 'Bạn có thể mô tả chi tiết hơn về vấn đề của cây trồng không? Hoặc upload ảnh để tôi có thể hỗ trợ tốt hơn.',
+                'quick_reply': True
+            })
+        
+        # ============================================================================
+        # FULL RAG PIPELINE for real questions
+        # ============================================================================
+        
         # Create user message for memory
         user_message = ChatMessage.from_user(user_query)
         
-        # Prepare pipeline input (SAME AS RAG.PY)
+        # Prepare pipeline input (Use search_query for retrieval, user_query for prompt)
         pipeline_input = {
-            "text_embedder": {"text": user_query},
-            "bm25_retriever": {"query": user_query},
-            "ranker": {"query": user_query},
+            "text_embedder": {"text": search_query},  # Use enhanced query for better retrieval
+            "bm25_retriever": {"query": search_query},  # Use enhanced query for better retrieval
+            "ranker": {"query": search_query},  # Use enhanced query for better ranking
             "chat_prompt_builder": {
-                "query": user_query,
+                "query": user_query,  # Keep original user query in prompt
                 "identified_disease": identified_disease
             },
             "memory_joiner": {"values": [user_message]},
-            "answer_builder": {"query": user_query}
+            "answer_builder": {"query": user_query}  # Keep original user query
         }
         
         # Run pipeline

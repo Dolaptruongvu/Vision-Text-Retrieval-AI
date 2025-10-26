@@ -2,6 +2,7 @@ import torch
 import os
 import time
 import traceback
+import re
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
 import numpy as np
@@ -86,18 +87,18 @@ GOOGLE_AI_MODEL_NAME_RAGAS = get_env_var("GOOGLE_AI_MODEL_NAME_RAGAS", default_v
 HF_TOKEN = Secret.from_token(hf_token) if hf_token else None
 # EXPECTED_EMBEDDING_DIM = 384 ## for sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 # EXPECTED_EMBEDDING_DIM = 1024 ## for multilingual-e5-large-instruct
-# EXPECTED_EMBEDDING_DIM = 896 ## for HIT-TMG/KaLM-embedding-multilingual-mini-v1
-EXPECTED_EMBEDDING_DIM = 768 ## for ibm-granite/granite-embedding-278m-multilingual
+EXPECTED_EMBEDDING_DIM = 896 ## for HIT-TMG/KaLM-embedding-multilingual-mini-v1
+# EXPECTED_EMBEDDING_DIM = 768 ## for ibm-granite/granite-embedding-278m-multilingual
 # COLLECTION_NAME = "rag_collection_v2" # for senteence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 # COLLECTION_NAME = "rag_collection_multilingual_e5_large_instruct"  # for multilingual-e5-large-instruct
-# COLLECTION_NAME = "rag_collection_KaLM_embedding_multilingual_mini_v1"  # for multilingual-e5-large-instruct
-COLLECTION_NAME = "rag_collection_ibm_granite_granite_embedding_278m_multilingual"  # For ibm-granite/granite-embedding-278m-multilingual
+COLLECTION_NAME = "rag_collection_KaLM_embedding_multilingual_mini_v1"  # for multilingual-e5-large-instruct
+# COLLECTION_NAME = "rag_collection_ibm_granite_granite_embedding_278m_multilingual"  # For ibm-granite/granite-embedding-278m-multilingual
 VECTOR_FIELD_NAME = "embedding"
 TEXT_FIELD_NAME_MILVUS = "content"
 MILVUS_INDEX_PARAMS = {"index_type": "DISKANN", "metric_type": "COSINE", "params": {"search_list": 100}}
 MILVUS_SEARCH_PARAMS = {"metric_type": "COSINE", "params": {"search_list": 100}}
 MILVUS_TOP_K = 15 # old 7 10
-ES_INDEX_NAME = "my_rag_index_final"
+ES_INDEX_NAME = "my_rag_index_final2"
 ES_BM25_TOP_K = 15 # old 7 10
 # RANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-12-v2"
 # RANKER_MODEL_NAME = "jinaai/jina-reranker-v2-base-multilingual"
@@ -106,8 +107,8 @@ RANKER_MODEL_NAME = "BAAI/bge-reranker-v2-m3"
 RANKER_FINAL_TOP_K = 8
 # EMBEDDER_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 # EMBEDDER_MODEL_NAME = "intfloat/multilingual-e5-large-instruct"
-# EMBEDDER_MODEL_NAME = "HIT-TMG/KaLM-embedding-multilingual-mini-v1"  # For HIT-TMG/KaLM-embedding-multilingual-mini-v1
-EMBEDDER_MODEL_NAME = "ibm-granite/granite-embedding-278m-multilingual"  # For ibm-granite/granite-embedding-278m-multilingual
+EMBEDDER_MODEL_NAME = "HIT-TMG/KaLM-embedding-multilingual-mini-v1"  # For HIT-TMG/KaLM-embedding-multilingual-mini-v1 (896 dims)
+# EMBEDDER_MODEL_NAME = "ibm-granite/granite-embedding-278m-multilingual"  # For ibm-granite/granite-embedding-278m-multilingual (768 dims)
 OLLAMA_TIMEOUT = 600  # Tăng từ 300 lên 600 giây (10 phút)
 RAGAS_GOOGLE_AI_TIMEOUT = 360.0
 
@@ -353,6 +354,61 @@ if not evaluation_dataset_for_ragas:
 print("-----------------------------")
 
 
+# --- Helper Function: Extract Disease Name from Question ---
+def extract_disease_from_question(question: str) -> tuple:
+    """
+    Extract disease name from question format: "Question text?(Disease Name)"
+    Returns: (cleaned_question, disease_name or None)
+    
+    Example:
+        Input: "Bệnh này là bệnh gì?(Potato Late blight)"
+        Output: ("Bệnh này là bệnh gì?", "Potato Late blight")
+    """
+    import re
+    # Pattern: text in parentheses at the end
+    match = re.search(r'\(([^)]+)\)\s*$', question)
+    if match:
+        disease_name = match.group(1).strip()
+        # Remove the parentheses part from question
+        cleaned_question = question[:match.start()].strip()
+        return cleaned_question, disease_name
+    return question, None
+
+def enhance_search_query(question: str, identified_disease: str = None) -> str:
+    """
+    Enhance search query based on disease context.
+    Similar to RAGserver.py logic.
+    
+    Returns: Enhanced query for better retrieval
+    """
+    if not identified_disease:
+        return question
+    
+    # Replace " - " with space for cleaner search
+    # Example: "Strawberry - Leaf scorch" -> "Strawberry Leaf scorch"
+    enhanced_query = identified_disease.replace(' - ', ' ')
+    
+    # Generic questions that should use disease name directly
+    generic_questions = [
+        'đây là bệnh gì', 'bệnh này', 'cây này', 
+        'what disease', 'what is this', 'bệnh gì',
+        'triệu chứng', 'symptoms', 'cách chữa', 'treatment'
+    ]
+    
+    question_lower = question.lower()
+    
+    # If question is generic or very short, use disease name as search query
+    if any(gq in question_lower for gq in generic_questions) or len(question.split()) <= 3:
+        search_query = enhanced_query
+        print(f"  [ENHANCED QUERY] Generic question detected. Using disease name: '{search_query}'")
+    else:
+        # Combine disease name with user question for context
+        search_query = f"{enhanced_query} {question}"
+        print(f"  [ENHANCED QUERY] Combined query: '{search_query}'")
+    
+    return search_query
+
+
 # --- Run Pipeline & Collect Data ---
 print("--- Running Pipeline to Collect Data for Ragas (Using Ollama Generator) ---")
 ragas_data_samples = []
@@ -362,31 +418,45 @@ if not evaluation_dataset_for_ragas:
     print("ERROR: `evaluation_dataset_for_ragas` is empty.")
 else:
     for i, item in enumerate(evaluation_dataset_for_ragas):
-        question = item["question"]
-        print(f"\nProcessing {i+1}/{len(evaluation_dataset_for_ragas)}: {question}")
+        original_question = item["question"]
+        print(f"\nProcessing {i+1}/{len(evaluation_dataset_for_ragas)}: {original_question}")
+        
+        # Extract disease name from question (if present in parentheses)
+        cleaned_question, identified_disease = extract_disease_from_question(original_question)
+        
+        if identified_disease:
+            print(f"  [DISEASE DETECTED] Extracted: '{identified_disease}'")
+            print(f"  [CLEANED QUESTION] '{cleaned_question}'")
+        
+        # Enhance search query for better retrieval
+        search_query = enhance_search_query(cleaned_question, identified_disease)
+        
         pipeline_input = {
-            "text_embedder": {"text": question},
-            "bm25_retriever": {"query": question},
-            "ranker": {"query": question},
-            "eval_chat_prompt_builder": {"query": question},
+            "text_embedder": {"text": search_query},  # Use enhanced query for retrieval
+            "bm25_retriever": {"query": search_query},  # Use enhanced query for retrieval
+            "ranker": {"query": search_query},  # Use enhanced query for ranking
+            "eval_chat_prompt_builder": {
+                "query": cleaned_question,  # Keep original question in prompt
+                "identified_disease": identified_disease  # Pass disease to prompt
+            },
         }
         try:
             result = eval_pipeline.run(pipeline_input, include_outputs_from=["ranker", "llm"])
             contexts = [doc.content for doc in result.get("ranker", {}).get("documents", []) if doc.content and doc.content.strip()]
             answer = result.get("llm", {}).get("replies", [""])[0]
-            if not answer: logging.warning(f"Empty answer from Ollama for: {question}")
+            if not answer: logging.warning(f"Empty answer from Ollama for: {original_question}")
 
             ragas_data_samples.append({
-                "question": question,
+                "question": cleaned_question,  # Use cleaned question for Ragas
                 "contexts": contexts,
                 "answer": answer,
                 "ground_truth": item["ground_truth"]
             })
             print(f"  Collected contexts: {len(contexts)}, Answer generated (by Ollama).")
         except Exception as e:
-            print(f"  ERROR processing question '{question}': {e}")
+            print(f"  ERROR processing question '{original_question}': {e}")
             ragas_data_samples.append({
-                "question": question, "contexts": [], "answer": f"Pipeline Error: {e}", "ground_truth": item["ground_truth"]
+                "question": cleaned_question, "contexts": [], "answer": f"Pipeline Error: {e}", "ground_truth": item["ground_truth"]
             })
 
 end_collection_time = time.time()
