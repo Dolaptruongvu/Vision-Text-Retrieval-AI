@@ -112,6 +112,11 @@ def verify_user_token(token):
             'error': f'Authentication service error: {str(e)}'
         }
 
+def is_internal_request(request):
+    """Check if request is from Backend (internal)"""
+    internal_header = request.headers.get('X-Internal-Request', '').lower()
+    return internal_header == 'true'
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -205,33 +210,54 @@ def predict():
     # Track processing time
     start_time = time.time()
     
-    # Step 1: AUTHENTICATION - Verify user token
+    # Step 1: AUTHENTICATION
+    # Check if this is an internal request from Backend
+    is_internal = is_internal_request(request)
+    authenticated_user = None
     user_token = None
     
-    # Try to get token from Authorization header
-    auth_header = request.headers.get('Authorization', '')
-    if auth_header.startswith('Bearer '):
-        user_token = auth_header.split(' ')[1]
-    # Fallback to form data
-    elif request.form.get('token'):
-        user_token = request.form.get('token', '').strip()
-    
-    # Verify token
-    auth_result = verify_user_token(user_token)
-    
-    if not auth_result['verified']:
-        print(f"[VISION SERVICE] Authentication failed: {auth_result.get('error')}")
-        return jsonify({
-            'success': False,
-            'error': auth_result.get('error', 'Authentication required'),
-            'message': 'Please login first to use the prediction service',
-            'code': 'AUTHENTICATION_REQUIRED'
-        }), 401
-    
-    # Get authenticated user info
-    authenticated_user = auth_result.get('user')
-    if authenticated_user:
-        print(f"[VISION SERVICE] Authenticated user: {authenticated_user.get('username')} ({authenticated_user.get('email')})")
+    if is_internal:
+        # Internal request from Backend - trust the user info passed in form data
+        print(f"[VISION SERVICE] Internal request from Backend")
+        user_id = request.form.get('userId')
+        username = request.form.get('username')
+        
+        if user_id and username:
+            authenticated_user = {
+                'id': user_id,
+                'username': username
+            }
+            print(f"[VISION SERVICE] User from Backend: {username} (ID: {user_id})")
+        else:
+            print(f"[VISION SERVICE] Warning: Internal request but no user info provided")
+    else:
+        # External request - verify JWT token (old flow, for backward compatibility)
+        print(f"[VISION SERVICE] External request - verifying JWT token")
+        
+        # Try to get token from Authorization header
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            user_token = auth_header.split(' ')[1]
+        # Fallback to form data
+        elif request.form.get('token'):
+            user_token = request.form.get('token', '').strip()
+        
+        # Verify token
+        auth_result = verify_user_token(user_token)
+        
+        if not auth_result['verified']:
+            print(f"[VISION SERVICE] Authentication failed: {auth_result.get('error')}")
+            return jsonify({
+                'success': False,
+                'error': auth_result.get('error', 'Authentication required'),
+                'message': 'Please login first to use the prediction service',
+                'code': 'AUTHENTICATION_REQUIRED'
+            }), 401
+        
+        # Get authenticated user info
+        authenticated_user = auth_result.get('user')
+        if authenticated_user:
+            print(f"[VISION SERVICE] Authenticated user: {authenticated_user.get('username')} ({authenticated_user.get('email')})")
     
     # Get other inputs
     image_file = request.files.get('image')
