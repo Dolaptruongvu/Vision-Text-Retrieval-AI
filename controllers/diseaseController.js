@@ -1,5 +1,6 @@
 // Disease Detection Controller
 const DiseaseHistory = require('../models/DiseaseHistory');
+const mongoose = require('mongoose');
 
 // @desc    Save disease detection result
 // @route   POST /api/disease/save
@@ -196,6 +197,114 @@ exports.getDiseaseDetail = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error getting disease detail',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get monthly disease statistics (percentage distribution)
+// @route   GET /api/disease/monthly-stats
+// @access  Private
+exports.getMonthlyDiseaseStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { year, month } = req.query;
+
+    // Default to current month if not specified
+    const now = new Date();
+    const targetYear = year ? parseInt(year) : now.getFullYear();
+    const targetMonth = month ? parseInt(month) : now.getMonth() + 1; // JS months are 0-indexed
+
+    // Calculate start and end of month IN UTC (to match MongoDB storage)
+    const startOfMonth = new Date(Date.UTC(targetYear, targetMonth - 1, 1, 0, 0, 0, 0));
+    const endOfMonth = new Date(Date.UTC(targetYear, targetMonth, 0, 23, 59, 59, 999));
+
+    console.log(`[DISEASE STATS] Calculating for ${targetYear}-${targetMonth}`);
+    console.log(`[DISEASE STATS] Date range (UTC): ${startOfMonth.toISOString()} to ${endOfMonth.toISOString()}`);
+    console.log(`[DISEASE STATS] UserId:`, userId);
+
+    // Get disease distribution for the month
+    const diseaseStats = await DiseaseHistory.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId), // Convert string to ObjectId
+          detectionDate: {
+            $gte: startOfMonth,
+            $lte: endOfMonth
+          }
+        }
+      },
+      {
+        $group: {
+          _id: '$diseaseName',
+          count: { $sum: 1 },
+          avgConfidence: { $avg: '$confidence' },
+          diseaseNameRaw: { $first: '$diseaseNameRaw' }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      }
+    ]);
+
+    // Calculate total detections for percentage
+    const totalDetections = diseaseStats.reduce((sum, item) => sum + item.count, 0);
+
+    // Format results with percentage
+    const diseaseDistribution = diseaseStats.map(item => ({
+      diseaseName: item._id,
+      diseaseNameRaw: item.diseaseNameRaw || item._id,
+      count: item.count,
+      percentage: totalDetections > 0 ? ((item.count / totalDetections) * 100).toFixed(2) : 0,
+      avgConfidence: item.avgConfidence ? (item.avgConfidence * 100).toFixed(2) : 0
+    }));
+
+    // Get previous month stats for comparison (also in UTC)
+    const prevMonthStart = new Date(Date.UTC(targetYear, targetMonth - 2, 1, 0, 0, 0, 0));
+    const prevMonthEnd = new Date(Date.UTC(targetYear, targetMonth - 1, 0, 23, 59, 59, 999));
+
+    const prevMonthTotal = await DiseaseHistory.countDocuments({
+      userId: new mongoose.Types.ObjectId(userId), // Convert string to ObjectId
+      detectionDate: {
+        $gte: prevMonthStart,
+        $lte: prevMonthEnd
+      }
+    });
+
+    // Calculate trend
+    const trend = prevMonthTotal > 0 
+      ? (((totalDetections - prevMonthTotal) / prevMonthTotal) * 100).toFixed(2)
+      : totalDetections > 0 ? 100 : 0;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        period: {
+          year: targetYear,
+          month: targetMonth,
+          monthName: new Date(targetYear, targetMonth - 1).toLocaleString('vi-VN', { month: 'long' }),
+          startDate: startOfMonth,
+          endDate: endOfMonth
+        },
+        summary: {
+          totalDetections,
+          previousMonthTotal: prevMonthTotal,
+          trend: `${trend > 0 ? '+' : ''}${trend}%`,
+          trendValue: parseFloat(trend)
+        },
+        diseaseDistribution,
+        topDiseases: diseaseDistribution.slice(0, 5),
+        message: totalDetections === 0 
+          ? `Không có dữ liệu phát hiện bệnh trong tháng ${targetMonth}/${targetYear}`
+          : `Tháng ${targetMonth}/${targetYear}: ${diseaseDistribution[0]?.diseaseName} chiếm ${diseaseDistribution[0]?.percentage}% (${diseaseDistribution[0]?.count}/${totalDetections} trường hợp)`
+      }
+    });
+
+  } catch (error) {
+    console.error('Get monthly disease stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting monthly disease statistics',
       error: error.message
     });
   }
