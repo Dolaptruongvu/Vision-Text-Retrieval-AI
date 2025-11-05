@@ -112,4 +112,45 @@ export const diseaseAPI = {
   },
 };
 
+// ============================================================================
+// CHAT SESSION APIs
+// ============================================================================
+export const sessionAPI = {
+  // Get all sessions
+  getSessions: async () => {
+    const response = await api.get('/chat/sessions');
+    return response.data;
+  },
+
+  // Get single session
+  getSession: async (id) => {
+    const response = await api.get(`/chat/sessions/${id}`);
+    return response.data;
+  },
+
+  // Create new session
+  createSession: async (title = 'New Chat') => {
+    const response = await api.post('/chat/sessions', { title });
+    return response.data;
+  },
+
+  // Add message to session
+  addMessage: async (sessionId, message) => {
+    const response = await api.post(`/chat/sessions/${sessionId}/messages`, message);
+    return response.data;
+  },
+
+  // Delete session
+  deleteSession: async (id) => {
+    const response = await api.delete(`/chat/sessions/${id}`);
+    return response.data;
+  },
+
+  // Clear session messages
+  clearSession: async (id) => {
+    const response = await api.put(`/chat/sessions/${id}/clear`);
+    return response.data;
+  },
+};
+
 export default api;

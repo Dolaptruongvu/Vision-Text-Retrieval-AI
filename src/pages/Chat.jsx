@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { chatAPI } from '../services/api';
-import { Send, Image as ImageIcon, X, Loader2, MessageSquare } from 'lucide-react';
+import { chatAPI, sessionAPI } from '../services/api';
+import { Send, Image as ImageIcon, X, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react';
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
@@ -9,8 +9,102 @@ export default function Chat() {
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   
+  // Chat session management
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  // Load sessions on mount
+  useEffect(() => {
+    loadSessions();
+  }, []);
+
+  // Load existing sessions
+  const loadSessions = async () => {
+    try {
+      const response = await sessionAPI.getSessions();
+      if (response.success) {
+        setSessions(response.data);
+        // Auto-load most recent session or create new one
+        if (response.data.length > 0) {
+          loadSession(response.data[0].id);
+        } else {
+          createNewSession();
+        }
+      }
+    } catch (error) {
+      console.error('Load sessions error:', error);
+    }
+  };
+
+  // Load specific session
+  const loadSession = async (sessionId) => {
+    try {
+      const response = await sessionAPI.getSession(sessionId);
+      if (response.success && response.data) {
+        setCurrentSessionId(sessionId);
+        // Convert messages to frontend format (safe guard for empty array)
+        const messages = response.data.messages || [];
+        const formattedMessages = messages.map((msg, index) => ({
+          id: index,
+          type: msg.role === 'user' ? 'user' : 'ai',
+          text: msg.content,
+          timestamp: new Date(msg.timestamp) // ← Parse string to Date object
+        }));
+        setMessages(formattedMessages);
+      }
+    } catch (error) {
+      console.error('Load session error:', error);
+      // If load fails, create new session
+      createNewSession();
+    }
+  };
+
+  // Create new session
+  const createNewSession = async () => {
+    try {
+      const response = await sessionAPI.createSession();
+      if (response.success) {
+        setCurrentSessionId(response.data.id);
+        setMessages([]);
+        setInput('');
+        setImage(null);
+        setImagePreview(null);
+        loadSessions(); // Refresh session list
+      }
+    } catch (error) {
+      console.error('Create session error:', error);
+    }
+  };
+
+  // Delete session
+  const deleteSession = async (sessionId) => {
+    if (!confirm('Xóa cuộc trò chuyện này?')) return;
+    
+    try {
+      await sessionAPI.deleteSession(sessionId);
+      loadSessions();
+      if (sessionId === currentSessionId) {
+        createNewSession();
+      }
+    } catch (error) {
+      console.error('Delete session error:', error);
+    }
+  };
+
+  // Save message to current session
+  const saveMessage = async (role, content) => {
+    if (!currentSessionId) return;
+    
+    try {
+      await sessionAPI.addMessage(currentSessionId, { role, content });
+      loadSessions(); // Refresh to update lastMessageAt
+    } catch (error) {
+      console.error('Save message error:', error);
+    }
+  };
 
   // Auto scroll to bottom when new message arrives
   useEffect(() => {
@@ -49,6 +143,11 @@ export default function Chat() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    
+    // Save user message to session
+    await saveMessage('user', input || 'Uploaded image');
+    
+    const currentInput = input;
     setInput('');
     setLoading(true);
 
@@ -57,7 +156,7 @@ export default function Chat() {
       if (image) {
         formData.append('image', image);
       }
-      if (input.trim()) {
+      if (currentInput.trim()) {
         formData.append('query', input);
       }
 
@@ -72,6 +171,9 @@ export default function Chat() {
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, aiMessage]);
+        
+        // Save AI response to session
+        await saveMessage('assistant', response.data.ai_response);
       } else {
         const errorMessage = {
           id: Date.now() + 1,
@@ -103,17 +205,77 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <MessageSquare className="w-6 h-6 text-primary-600" />
-          Chẩn Đoán Bệnh Cây Trồng
-        </h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Upload ảnh và đặt câu hỏi về bệnh cây trồng
-        </p>
+    <div className="flex h-full">
+      {/* Session Sidebar */}
+      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        {/* New Chat Button */}
+        <div className="p-4 border-b">
+          <button
+            onClick={createNewSession}
+            className="btn btn-primary w-full flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Chat
+          </button>
+        </div>
+
+        {/* Session List */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {sessions.map((session) => (
+            <div
+              key={session.id}
+              onClick={() => loadSession(session.id)}
+              className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group ${
+                session.id === currentSessionId ? 'bg-primary-50 border border-primary-200' : ''
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate ${
+                    session.id === currentSessionId ? 'text-primary-700' : 'text-gray-900'
+                  }`}>
+                    {session.title}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 truncate">
+                    {session.preview}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {new Date(session.lastMessageAt).toLocaleString('vi-VN', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteSession(session.id);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded transition-opacity"
+                  title="Xóa"
+                >
+                  <Trash2 className="w-4 h-4 text-red-600" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <MessageSquare className="w-6 h-6 text-primary-600" />
+            Chẩn Đoán Bệnh Cây Trồng
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Upload ảnh và đặt câu hỏi về bệnh cây trồng
+          </p>
+        </div>
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
@@ -172,10 +334,13 @@ export default function Chat() {
                 <p className={`text-xs mt-2 ${
                   message.type === 'user' ? 'text-primary-100' : 'text-gray-500'
                 }`}>
-                  {message.timestamp.toLocaleTimeString('vi-VN', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
+                  {message.timestamp && typeof message.timestamp.toLocaleTimeString === 'function' 
+                    ? message.timestamp.toLocaleTimeString('vi-VN', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })
+                    : ''
+                  }
                 </p>
               </div>
             </div>
@@ -267,6 +432,7 @@ export default function Chat() {
           AI có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.
         </p>
       </div>
+    </div>
     </div>
   );
 }
