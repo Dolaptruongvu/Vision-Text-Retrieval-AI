@@ -1,6 +1,12 @@
 // Disease Detection Controller
 const DiseaseHistory = require('../models/DiseaseHistory');
 const mongoose = require('mongoose');
+const axios = require('axios');
+const FormData = require('form-data');
+const fs = require('fs');
+
+// Vision Service URL
+const VISION_SERVICE_URL = process.env.VISION_SERVICE_URL || 'http://localhost:5003';
 
 // @desc    Save disease detection result
 // @route   POST /api/disease/save
@@ -305,6 +311,156 @@ exports.getMonthlyDiseaseStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error getting monthly disease statistics',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Predict disease from image and/or query
+// @route   POST /api/disease/predict
+// @access  Private
+exports.predictDisease = async (req, res) => {
+  try {
+    const { query } = req.body;
+    const imageFile = req.file; // From multer middleware
+    
+    // Validate input
+    if (!imageFile && !query) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either image or query must be provided'
+      });
+    }
+
+    console.log('[BACKEND] Forwarding request to Vision Service...');
+    if (imageFile) {
+      console.log(`[BACKEND] Image: ${imageFile.originalname}`);
+    }
+    if (query) {
+      console.log(`[BACKEND] Query: ${query}`);
+    }
+
+    // Prepare FormData for Vision Service
+    const formData = new FormData();
+    
+    if (imageFile) {
+      // Read file buffer and append to FormData
+      formData.append('image', fs.createReadStream(imageFile.path), {
+        filename: imageFile.originalname,
+        contentType: imageFile.mimetype
+      });
+    }
+    
+    if (query) {
+      formData.append('query', query);
+    }
+    
+    // Add user info (Vision Service can use this for context)
+    formData.append('userId', req.user.id);
+    formData.append('username', req.user.username);
+
+    // Forward to Vision Service
+    const visionResponse = await axios.post(
+      `${VISION_SERVICE_URL}/predict`,
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          'X-Internal-Request': 'true', // Mark as internal request
+          'X-User-Id': req.user.id
+        },
+        timeout: 200000 // 200 seconds for LLM processing
+      }
+    );
+
+    // Clean up uploaded file
+    if (imageFile && fs.existsSync(imageFile.path)) {
+      fs.unlinkSync(imageFile.path);
+    }
+
+    // Check Vision Service response
+    if (!visionResponse.data.success) {
+      console.error('[BACKEND] Vision Service failed:', visionResponse.data.error);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Vision Service failed',
+        error: visionResponse.data.error
+      });
+    }
+
+    console.log('[BACKEND] Vision Service successful');
+    
+    // Save result to database (Backend responsibility for internal requests)
+    let savedToDb = false;
+    let recordId = null;
+    
+    const visionResult = visionResponse.data.vision_result;
+    const aiResponse = visionResponse.data.ai_response;
+    
+    if (visionResult) {
+      try {
+        const diseaseHistory = new DiseaseHistory({
+          userId: req.user.id,
+          diseaseName: visionResult.disease,
+          diseaseNameRaw: visionResult.raw_disease || visionResult.disease,
+          confidence: visionResult.confidence,
+          userQuery: query || 'Image only prediction',
+          aiResponse: aiResponse,
+          imageName: imageFile ? imageFile.originalname : null,
+          detectionDate: new Date()
+        });
+
+        const savedHistory = await diseaseHistory.save();
+        savedToDb = true;
+        recordId = savedHistory._id;
+        
+        console.log(`[BACKEND] Result saved to database (ID: ${recordId})`);
+      } catch (dbError) {
+        console.error('[BACKEND] Failed to save to database:', dbError);
+        // Don't fail the request if DB save fails
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      data: {
+        vision_result: visionResult,
+        ai_response: aiResponse,
+        saved_to_db: savedToDb,
+        record_id: recordId
+      }
+    });
+
+  } catch (error) {
+    console.error('[BACKEND] Error calling Vision Service:', error.message);
+    
+    // Clean up uploaded file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    
+    // Check if it's a timeout error
+    if (error.code === 'ECONNABORTED') {
+      return res.status(504).json({
+        success: false,
+        message: 'Request timeout - AI processing took too long',
+        error: 'Gateway Timeout'
+      });
+    }
+    
+    // Check if Vision Service is down
+    if (error.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        success: false,
+        message: 'Vision Service is not available',
+        error: 'Service Unavailable'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error processing prediction request',
       error: error.message
     });
   }

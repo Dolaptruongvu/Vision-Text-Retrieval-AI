@@ -27,6 +27,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/disease', require('./routes/disease'));
+app.use('/api/chat', require('./routes/chat'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
