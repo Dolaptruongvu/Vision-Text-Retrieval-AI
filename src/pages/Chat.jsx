@@ -28,10 +28,12 @@ export default function Chat() {
       if (response.success) {
         setSessions(response.data);
         // Auto-load most recent session or create new one
-        if (response.data.length > 0) {
-          loadSession(response.data[0].id);
-        } else {
-          createNewSession();
+        if (!currentSessionId) {
+          if (response.data.length > 0) {
+            loadSession(response.data[0].id);
+          } else {
+            createNewSession();
+          }
         }
       }
     } catch (error) {
@@ -51,6 +53,7 @@ export default function Chat() {
           id: index,
           type: msg.role === 'user' ? 'user' : 'ai',
           text: msg.content,
+          image: msg.image,
           timestamp: new Date(msg.timestamp) // ← Parse string to Date object
         }));
         setMessages(formattedMessages);
